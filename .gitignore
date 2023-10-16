@@ -30,3 +30,17 @@
 *.exe
 *.out
 *.app
+
+# Local Settings
+**/.settings/**
+**/*.mxproject
+
+# Build Artifacts
+**/Debug/**
+**/Release/**
+*.scratch
+
+# Library Code
+**/Middlewares/**
+**/Drivers/**
+
