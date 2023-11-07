@@ -45,12 +45,11 @@ class WatchedTask : public virtual Task {
     }
 
     constexpr virtual units::quantised::Microseconds MinKickPeriod() const {
-        return this->MinPeriod();
+        return 0;
     }
 
     constexpr virtual units::quantised::Microseconds MaxKickPeriod() const {
-        // Twice deviation
-        return this->AvgPeriod() + 2 * (this->AvgPeriod() - this->MinPeriod());
+        return 0;
     }
 
   private:
@@ -85,8 +84,8 @@ class WatchdogTask : public StackTask<WatchdogStackSize> {
 
     constexpr const char* Name() const override { return "Watchdog"; }
 
-    constexpr std::uint8_t Priority() const override {
-        return static_cast<std::uint8_t>(osPriorityHigh7);
+    constexpr osPriority Priority() const override {
+        return osPriorityHigh7;
     }
 
     constexpr units::quantised::Microseconds MinPeriod() const override {
