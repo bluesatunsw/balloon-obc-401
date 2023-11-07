@@ -29,6 +29,7 @@
 #include "task.h"
 
 #include "units.hpp"
+#include "delay.hpp"
 
 namespace obc {
 class Task {
@@ -52,17 +53,13 @@ class Task {
 
     constexpr virtual const char* Name() const { return "Unnamed Task"; }
 
-    virtual std::span<StackType_t> Stack() { return {}; }
+    inline virtual std::span<StackType_t> Stack() { return {}; }
 
-    constexpr virtual std::uint8_t Priority() const {
-        return static_cast<std::uint8_t>(osPriorityNormal);
+    constexpr virtual osPriority Priority() const {
+        return osPriorityNormal;
     }
 
-    constexpr virtual units::quantised::Microseconds MinPeriod() const {
-        return 0;
-    }
-
-    constexpr virtual units::quantised::Microseconds AvgPeriod() const {
+    constexpr virtual units::quantised::Microseconds NominalPeriod() const {
         return 0;
     }
 
@@ -70,8 +67,8 @@ class Task {
     inline static void RTOSTask(void* instance) {
         while (true) {
             // TODO: Eliminate extra layer of indirection
-            // TOOD: Implement periodic tasks
-        	static_cast<Task*>(instance)->Run();
+            Timeout::Guard timeout{NominalPeriod()};
+        	  static_cast<Task*>(instance)->Run();
         }
 
         vTaskDelete(NULL);
