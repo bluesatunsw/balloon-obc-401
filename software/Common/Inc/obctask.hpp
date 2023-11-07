@@ -27,6 +27,7 @@
 #include "FreeRTOS.h"
 #include "cmsis_os.h"
 #include "task.h"
+
 #include "units.hpp"
 
 namespace obc {

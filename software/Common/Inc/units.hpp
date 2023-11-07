@@ -22,6 +22,12 @@
 
 #include <cstdint>
 
+#include "FreeRTOS.h"
+
 namespace obc::units::quantised {
 using Microseconds = std::int32_t;
+
+TickType_t ToTicks(Microseconds time) {
+    return (time * configTICK_RATE_HZ) / 1000000;
 }
+}  // namespace obc::units::quantised
