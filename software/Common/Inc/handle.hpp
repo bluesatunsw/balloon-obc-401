@@ -22,10 +22,9 @@
 
 #include <atomic>
 
-/*
- * TODO: get move and delete to work properly mostly so that
- * bus request works
- */
+#include "mutex.hpp"
+
+namespace obc {
 template<typename T, typename F>
 class Handle {
     friend F;
@@ -35,34 +34,70 @@ class Handle {
         friend Handle;
 
       public:
-        Handle* Top() const { return curr.load(); }
+        Handle* begin() const { return m_head; }
+
+        constexpr Handle* end() const { return nullptr; }
 
       private:
-        Handle* ExchangeTop(Handle* new_top) { return curr.exchange(new_top); }
-
-        std::atomic<Handle*> curr {nullptr};
+        volatile Handle* m_head {nullptr};
+        SpinLock         m_lock {};
     };
 
   public:
     Handle(const Handle& other) = delete;
-    Handle(Handle&& other)      = delete;
+
+    Handle(Handle&& other)
+        : m_payload(other.m_payload), m_prev(other.m_prev),
+          m_next(other.m_next), m_chain(other.m_chain) {
+        std::scoped_lock lock {m_chain->m_lock};
+        m_prev->m_next = this;
+        m_next->m_prev = this;
+
+        other.m_prev = nullptr;
+        other.m_next = nullptr;
+    }
 
     Handle& operator=(const Handle& other) = delete;
-    Handle& operator=(Handle&& other)      = delete;
 
-    ~Handle() = default;
+    Handle& operator=(Handle&& other) {
+        if (this == &other) return *this;
+
+        m_payload = other.m_payload;
+        m_prev    = other.m_prev;
+        m_next    = other.m_next;
+        m_chain   = other.m_chain;
+
+        std::scoped_lock lock {m_chain->m_lock};
+        m_prev->m_next = this;
+        m_next->m_prev = this;
+
+        other.m_prev = nullptr;
+        other.m_next = nullptr;
+    }
+
+    ~Handle() {
+        std::scoped_lock lock {m_chain->m_lock};
+        m_prev->m_next = m_next;
+        m_next->m_prev = m_prev;
+    }
 
     T& operator*() { return m_payload; }
 
     T* operator->() { return &m_payload; }
 
   private:
-    Handle(T payload, Chain& chain) : m_payload(payload) {
-        m_next = chain.ExchangeTop(this);
+    Handle(T payload, Chain& chain) : m_payload(payload), m_chain(&chain) {
+        std::scoped_lock lock {m_chain->m_lock};
+        m_next = m_chain->m_head;
+        if (!m_chain->m_head) m_chain->m_head->m_next = this;
+        m_chain->m_head = this;
     };
 
     Handle* operator++() const { return m_next; }
 
-    T             m_payload;
-    Handle<T, F>* m_next;
+    T                m_payload;
+    volatile Handle* m_prev {nullptr};
+    volatile Handle* m_next {nullptr};
+    Chain*           m_chain {};
 };
+}  // namespace obc
