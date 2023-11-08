@@ -33,10 +33,23 @@ class Handle {
     class Chain {
         friend Handle;
 
-      public:
-        Handle* begin() const { return m_head; }
+      private:
+        class HandleIt {
+          public:
+            HandleIt(Handle* ptr) : m_ptr(ptr) {}
 
-        constexpr Handle* end() const { return nullptr; }
+            friend auto operator<=>(const HandleIt&, const HandleIt&) = default;
+
+            T& operator*() {return **m_ptr}
+            HandleIt operator++() {return {*m_ptr->m_next};}
+
+          private:
+            Handle* m_ptr;
+        };
+
+      public:
+        HandleIt begin() const { return {m_head}; }
+        constexpr HandleIt end() const { return {nullptr}; }
 
       private:
         volatile Handle* m_head {nullptr};
@@ -82,7 +95,6 @@ class Handle {
     }
 
     T& operator*() { return m_payload; }
-
     T* operator->() { return &m_payload; }
 
   private:
@@ -92,8 +104,6 @@ class Handle {
         if (!m_chain->m_head) m_chain->m_head->m_next = this;
         m_chain->m_head = this;
     };
-
-    Handle* operator++() const { return m_next; }
 
     T                m_payload;
     volatile Handle* m_prev {nullptr};
