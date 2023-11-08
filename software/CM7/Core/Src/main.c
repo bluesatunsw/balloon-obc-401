@@ -153,8 +153,7 @@ int main(void) {
         osThreadNew(StartDefaultTask, NULL, &defaultTask_attributes);
 
     /* USER CODE BEGIN RTOS_THREADS */
-    unsigned char static_buf[static_buf_size];
-    CppMain(static_buf);
+    CppMain();
     /* USER CODE END RTOS_THREADS */
 
     /* USER CODE BEGIN RTOS_EVENTS */

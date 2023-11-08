@@ -20,6 +20,8 @@
 
 #include "cppmain.hpp"
 
+#include <cstddef>
+
 #include "bus.hpp"
 #include "watched_task.hpp"
 
@@ -59,11 +61,9 @@ struct StaticData {
     obc::WatchdogTask watchdog {watchlist};
 };
 
+alignas(StaticData) std::byte static_buf[sizeof(StaticData)];
 extern "C" {
-// Add on an extra 7 bytes to ensure alignment
-const unsigned long static_buf_size = sizeof(StaticData) + 7;
-
-void CppMain(void* static_buf) {
+void CppMain() {
     auto& static_data = *(new (static_buf) StaticData);
 }
 }
