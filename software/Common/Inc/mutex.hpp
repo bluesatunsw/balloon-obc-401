@@ -20,6 +20,9 @@
 
 #pragma once
 
+#include <atomic>
+#include <mutex>
+
 #include "FreeRTOS.h"
 #include "semphr.h"
 
@@ -35,5 +38,21 @@ class Mutex {
   private:
     SemaphoreHandle_t m_handle;
     StaticSemaphore_t m_data;
+};
+
+class CriticalGuard {
+  public:
+    CriticalGuard();
+    ~CriticalGuard();
+};
+
+class SpinLock {
+  public:
+    void lock();
+    void unlock();
+    bool try_lock();
+
+  private:
+    std::atomic_flag m_lock {false};
 };
 }  // namespace obc

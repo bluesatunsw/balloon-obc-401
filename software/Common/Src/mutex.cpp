@@ -30,4 +30,30 @@ void Mutex::unlock() { xSemaphoreGive(m_handle); }
 bool Mutex::try_lock() {
     return xSemaphoreTake(m_handle, static_cast<TickType_t>(0)) == pdTRUE;
 }
+
+CriticalGuard::CriticalGuard() { taskENTER_CRITICAL(); }
+
+CriticalGuard::~CriticalGuard() { taskEXIT_CRITICAL(); }
+
+void SpinLock::lock() {
+    taskENTER_CRITICAL();
+    while (m_lock.test_and_set(kstd::memory_order_acquire)) {
+        while (m_lock.test(std::memory_order_relaxed)) {}
+    }
+}
+
+void SpinLock::unlock() {
+    m_lock.clear(std::memory_order_release);
+    taskEXIT_CRITICAL();
+}
+
+bool SpinLock::try_lock() {
+    taskENTER_CRITICAL();
+    if (m_lock.test_and_set(kstd::memory_order_acquire)) {
+        // Failed to acquire
+        taskEXIT_CRITICAL();
+        return false;
+    }
+    return true;
+}
 }  // namespace obc
