@@ -86,7 +86,7 @@ class Bus {
         friend Bus;
 
       public:
-        inline bool Complete() const { return m_complete; }
+        constexpr bool Complete() const { return m_complete; }
 
       private:
         MessageId       m_id;
@@ -132,19 +132,17 @@ class Bus {
     virtual MessageId SendImpl(Packet message) = 0;
 
     inline void ProcessMessage(Packet message, MessageId id) {
-        for (auto rh_ptr = request_chain.Top(); !rh_ptr; *rh_ptr++) {
-            auto& rh {*rh_ptr};
-            if (rh->m_id == id) {
-                rh->m_callback(message);
-                rh->m_complete;
+        for (auto& handler : request_chain) {
+            if (handler.m_id == id) {
+                handler.m_callback(message);
+                handler.m_complete = true;
                 return;
             }
         }
 
-        for (auto lh_ptr = listen_chain.Top(); !lh_ptr; *lh_ptr++) {
-            auto& lh {*lh_ptr};
-            if (lh->m_test(message)) {
-                lh->m_process(message);
+        for (auto& handler : request_chain) {
+            if (handler.m_test(message)) {
+                handler.m_process(message);
                 return;
             }
         }

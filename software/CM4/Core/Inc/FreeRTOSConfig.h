@@ -17,6 +17,7 @@
  * this program. If not, see <https://www.gnu.org/licenses/>.
  */
 /* USER CODE END Header */
+
 /* USER CODE BEGIN Header */
 /*
  * FreeRTOS Kernel V10.3.1

@@ -21,48 +21,131 @@
 #pragma once
 
 #include <atomic>
+#include <concepts>
+#include <mutex>
 
-/*
- * TODO: get move and delete to work properly mostly so that
- * bus request works
- */
+#include "mutex.hpp"
+
+namespace obc {
 template<typename T, typename F>
 class Handle {
     friend F;
 
+  public:
+    class It;
+
+    Handle(Handle&& other) {
+        auto lock {other.Lock()};
+
+        m_payload    = std::move(other.m_payload);
+        m_prev       = other.m_prev;
+        m_next       = other.m_next;
+        other.m_prev = nullptr;
+        other.m_next = nullptr;
+
+        m_prev->m_next = this;
+        m_next->m_prev = this;
+    }
+
+    Handle& operator=(Handle&& other) {
+        if (this == &other) return *this;
+        auto lock {Lock()};
+        other.DropThen([this]() { m_payload = std::move(other.m_payload); });
+    }
+
+    friend void swap(Handle& lhs, Handle& rhs) {
+        std::scoped_lock lock {
+            lhs.m_prev_lock, lhs.m_next_lock, rhs.m_prev_lock, rhs.m_next_lock};
+        using std::swap;
+        swap(lhs.m_payload, rhs.m_payload);
+    }
+
+    ~Handle() {
+        Drop([]() {});
+    }
+
   private:
-    class Chain {
-        friend Handle;
+    class Chain;
 
-      public:
-        Handle* Top() const { return curr.load(); }
+    Handle(T&& payload, Chain& chain) : m_payload(payload), m_prev(nullptr) {
+        std::scoped_lock chain_lock {chain.m_lock};
+        m_next = chain.m_head;
+        if (chain.m_head) {
+            std::scoped_lock head_lock {chain.m_head->m_prev_lock};
+            chain.m_head->m_prev = this;
+        }
+    }
 
-      private:
-        Handle* ExchangeTop(Handle* new_top) { return curr.exchange(new_top); }
+    template<typename F>
+    void DropThen(F f, Handle* skip_locking = nullptr) {
+        while (true) {
+            auto lock {Lock()};
 
-        std::atomic<Handle*> curr {nullptr};
-    };
+            std::unique_lock prev_lock {m_prev->m_next_lock, std::try_to_lock};
+            // Abort and retry to if the adjacent lock cannot be acquired
+            if (m_prev != skip_locking && !prev_lock.owns_lock()) continue;
+
+            std::unique_lock next_lock {m_next->m_prev_lock, std::try_to_lock};
+            // Abort and retry to if the adjacent lock cannot be acquired
+            if (m_next != skip_locking && !next_lock.owns_lock()) continue;
+
+            m_prev->m_next = m_next;
+            m_next->m_prev = m_prev;
+            m_prev         = nullptr;
+            m_next         = nullptr;
+            f();
+            break;
+        }
+    }
+
+    auto Lock() { return std::scoped_lock {m_prev_lock, m_next_lock}; }
+
+    volatile T       m_payload;
+    volatile Handle* m_prev;
+    volatile Handle* m_next;
+    SpinLock         m_prev_lock {};
+    SpinLock         m_next_lock {};
+};
+
+template<typename T, typename F>
+class Handle<T, F>::It {
+  public:
+    ~It() {
+        ptr->m_prev_lock.unlock();
+        ptr->m_next_lock.unlock();
+    }
+
+    friend auto operator<=>(const It&, const It&) = default;
+
+    T& operator*() { return **m_ptr; }
+
+    It operator++() { return {*m_ptr->m_next}; }
+
+  private:
+    It() {}
+
+    It(Handle* ptr) : m_ptr(ptr) {
+        ptr->m_prev_lock.lock();
+        ptr->m_next_lock.lock();
+    }
+
+    Handle* m_ptr {nullptr};
+};
+
+template<typename T, typename F>
+class Handle<T, F>::Chain {
+    friend Handle;
 
   public:
-    Handle(const Handle& other) = delete;
-    Handle(Handle&& other)      = delete;
-
-    Handle& operator=(const Handle& other) = delete;
-    Handle& operator=(Handle&& other)      = delete;
-
-    ~Handle() = default;
-
-    T& operator*() { return m_payload; }
-
-    T* operator->() { return &m_payload; }
-
-  private:
-    Handle(T payload, Chain& chain) : m_payload(payload) {
-        m_next = chain.ExchangeTop(this);
+    Handle::It begin() const {
+        std::scoped_lock {m_lock};
+        return { m_head }
     };
 
-    Handle* operator++() const { return m_next; }
+    Handle::It end() const {return {m_head}};
 
-    T             m_payload;
-    Handle<T, F>* m_next;
-};
+  private:
+    volatile Handle* m_head {nullptr};
+    SpinLock         m_lock {};
+}
+}  // namespace obc
