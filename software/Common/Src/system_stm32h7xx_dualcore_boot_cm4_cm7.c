@@ -17,6 +17,7 @@
  * this program. If not, see <https://www.gnu.org/licenses/>.
  */
 /* USER CODE END Header */
+
 /**
  ******************************************************************************
  * @file    system_stm32h7xx_dualcore_boot_cm4_cm7.c

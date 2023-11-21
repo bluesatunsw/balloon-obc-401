@@ -84,9 +84,7 @@ class WatchdogTask : public StackTask<WatchdogStackSize> {
 
     constexpr const char* Name() const override { return "Watchdog"; }
 
-    constexpr osPriority Priority() const override {
-        return osPriorityHigh7;
-    }
+    constexpr osPriority Priority() const override { return osPriorityHigh7; }
 
     constexpr units::quantised::Microseconds MinPeriod() const override {
         return 500;
