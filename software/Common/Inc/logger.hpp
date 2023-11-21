@@ -21,13 +21,11 @@
 #pragma once
 
 namespace obc {
-class LoggerStream {
-
-};
+class LoggerStream {};
 
 class Logger {
-	LoggerStream operator*() {
-		// TODO
-	}
+    LoggerStream operator*() {
+        // TODO
+    }
 };
 }  // namespace obc

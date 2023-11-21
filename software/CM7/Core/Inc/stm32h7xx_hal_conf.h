@@ -17,6 +17,7 @@
  * this program. If not, see <https://www.gnu.org/licenses/>.
  */
 /* USER CODE END Header */
+
 /* Define to prevent recursive inclusion -------------------------------------*/
 #ifndef STM32H7xx_HAL_CONF_H
 #define STM32H7xx_HAL_CONF_H
@@ -115,18 +116,20 @@ extern "C" {
 #endif               /* HSE_VALUE */
 
 #if !defined(HSE_STARTUP_TIMEOUT)
-#    define HSE_STARTUP_TIMEOUT (100UL) /*!< Time out for HSE start up, in ms \
-                                         */
-#endif                                  /* HSE_STARTUP_TIMEOUT */
+#    define HSE_STARTUP_TIMEOUT                       \
+        (100UL) /*!< Time out for HSE start up, in ms \
+                 */
+#endif          /* HSE_STARTUP_TIMEOUT */
 
 /**
  * @brief Internal  oscillator (CSI) default value.
  *        This value is the default CSI value after Reset.
  */
 #if !defined(CSI_VALUE)
-#    define CSI_VALUE (4000000UL) /*!< Value of the Internal oscillator in \
-                                     Hz*/
-#endif                            /* CSI_VALUE */
+#    define CSI_VALUE                                        \
+        (4000000UL) /*!< Value of the Internal oscillator in \
+                       Hz*/
+#endif              /* CSI_VALUE */
 
 /**
  * @brief Internal High Speed oscillator (HSI) value.
@@ -135,9 +138,10 @@ extern "C" {
  * PLL).
  */
 #if !defined(HSI_VALUE)
-#    define HSI_VALUE (64000000UL) /*!< Value of the Internal oscillator in \
-                                      Hz*/
-#endif                             /* HSI_VALUE */
+#    define HSI_VALUE                                         \
+        (64000000UL) /*!< Value of the Internal oscillator in \
+                        Hz*/
+#endif               /* HSI_VALUE */
 
 /**
  * @brief External Low Speed oscillator (LSE) value.
