@@ -23,6 +23,8 @@
 #include <functional>
 #include <span>
 
+#include <units/time.h>
+
 #include "obctask.hpp"
 
 namespace obc {
@@ -41,24 +43,24 @@ class WatchedTask : public virtual Task {
             return;
         }
 
-        m_timer = 0;
+        m_timer = units::microseconds<float>(0);
     }
 
-    constexpr virtual units::quantised::Microseconds MinKickPeriod() const {
-        return 0;
+    constexpr virtual units::microseconds<float> MinKickPeriod() const {
+        return units::microseconds<float>(0);
     }
 
-    constexpr virtual units::quantised::Microseconds MaxKickPeriod() const {
-        return 0;
+    constexpr virtual units::microseconds<float> MaxKickPeriod() const {
+        return units::microseconds<float>(0);
     }
 
   private:
-    inline bool Advance(units::quantised::Microseconds dt) {
+    inline bool Advance(units::microseconds<float> dt) {
         m_timer += dt;
         return m_fault;
     }
 
-    units::quantised::Microseconds m_timer {0};
+    units::microseconds<float> m_timer {0};
     bool                           m_fault {false};
 };
 
@@ -75,7 +77,7 @@ class WatchdogTask : public StackTask<WatchdogStackSize> {
         for (auto& task_wrapper : m_watchlist) {
             auto& task = task_wrapper.get();
             // TODO: actually get dt
-            if (task.Advance(1000)) {
+            if (task.Advance(units::microseconds<float>(1000))) {
                 // TODO: restart task
                 // TODO: interface with system watch dog on fail of critical
             }
@@ -88,12 +90,8 @@ class WatchdogTask : public StackTask<WatchdogStackSize> {
         return osPriorityHigh7;
     }
 
-    constexpr units::quantised::Microseconds MinPeriod() const override {
-        return 500;
-    }
-
-    constexpr units::quantised::Microseconds AvgPeriod() const override {
-        return 1000;
+    constexpr units::microseconds<float> NominalPeriod() const override {
+        return units::microseconds<float>(1000);
     }
 
   private:

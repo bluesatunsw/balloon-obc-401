@@ -4,9 +4,10 @@
 #include <optional>
 #include <variant>
 
-#include "FreeRTOS.h"
+#include <units/time.h>
 
-#include "units.hpp"
+#include "FreeRTOS.h"
+#include "task.h"
 
 namespace obc {
 template<typename T, typename R>
@@ -16,23 +17,15 @@ concept Pollable = requires(T t) {
 
 class Timeout {
   public:
-    explicit Timeout(units::quantised::Microseconds period);
+    explicit Timeout(units::microseconds<float> period);
 
-    bool operator bool();
+    operator bool();
     void Block();
 
-    class Guard {
-      public:
-        explicit Guard(Timeout timeout);
-        explicit Guard(units::quantised::Microseconds period);
-        ~Guard();
-
-      private:
-        Timeout m_timeout;
-    };
+    class Guard;
 
     template<typename R, Pollable<std::optional<R>> F>
-    static std::optional<R> Poll(F f, units::quantised::Microseconds timeout) {
+    static std::optional<R> Poll(F f, units::microseconds<float> timeout) {
         Timeout timer {timeout};
         while (!timer)
             if (auto x = f()) return *x;
@@ -40,7 +33,7 @@ class Timeout {
     }
 
     template<Pollable<bool> F>
-    static bool Poll(F f, units::quantised::Microseconds timeout) {
+    static bool Poll(F f, units::microseconds<float> timeout) {
         return Poll<std::monostate>(
             [&] {
                 if (f()) return std::monostate {};
@@ -53,5 +46,15 @@ class Timeout {
   private:
     TimeOut_t  m_timeout;
     TickType_t m_period;
+};
+
+class Timeout::Guard {
+  public:
+    explicit Guard(Timeout timeout);
+    explicit Guard(units::microseconds<float> period);
+    ~Guard();
+
+  private:
+    Timeout m_timeout;
 };
 }  // namespace obc
