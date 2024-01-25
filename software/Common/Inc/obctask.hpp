@@ -28,8 +28,9 @@
 #include "cmsis_os.h"
 #include "task.h"
 
-#include "units.hpp"
 #include "delay.hpp"
+
+#include <units/time.h>
 
 namespace obc {
 class Task {
@@ -59,16 +60,17 @@ class Task {
         return osPriorityNormal;
     }
 
-    constexpr virtual units::quantised::Microseconds NominalPeriod() const {
-        return 0;
+    constexpr virtual units::microseconds<float> NominalPeriod() const {
+        return units::microseconds<float>(0);
     }
 
   private:
     inline static void RTOSTask(void* instance) {
         while (true) {
             // TODO: Eliminate extra layer of indirection
-            Timeout::Guard timeout{NominalPeriod()};
-        	  static_cast<Task*>(instance)->Run();
+        	auto task = static_cast<Task*>(instance);
+            Timeout::Guard timeout{task->NominalPeriod()};
+        	task->Run();
         }
 
         vTaskDelete(NULL);

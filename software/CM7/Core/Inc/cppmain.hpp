@@ -20,7 +20,7 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
-void CppMain(void* static_buf);
+void CppMain();
 #ifdef __cplusplus
 }
 #endif
