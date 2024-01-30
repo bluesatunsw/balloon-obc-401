@@ -29,71 +29,40 @@
 #include "handle.hpp"
 
 namespace obc {
-class Bus {
-  public:
-    using Packet    = std::span<std::byte>;
-    using MessageId = std::uint32_t;
+template<typename T, typename I = std::uint32_t, typename P = std::span<std::byte>>
+concept SendBus = requires(T& bus, const I& i, const P& p) {
+	{ bus.Send(i, p) } -> void;
+};
 
-    class ProcessCallback : public Callback<void, const Packet> {
-      public:
-        template<typename T, typename R, MethodPtrAlt<T, const R&> M>
-        ProcessCallback(T& instance, std::uint64_t data)
-            : Callback<void, const Packet>(
-                  &instance, &MethodWrapper<T, R, M>, data
-              ) {}
+template<typename P = std::span<std::byte>>
+class ListenCallback : public Callback<void, const P> {
 
-        template<typename T, MethodPtr<T> M>
-        ProcessCallback(T& instance, std::uint64_t data)
-            : Callback<void, const Packet>(
-                  &instance, &DirectMethodWrapper<T, M>, data
-              ) {}
+};
 
-      private:
-        template<typename T, typename R, MethodPtrAlt<T, const R&> M>
-        static void MethodWrapper(
-            void* callee, std::uint64_t data, const Packet packet
-        ) {
-            assert(sizeof(R) == packet.size());
-            (static_cast<T*>(callee)->*M)(
-                data, *reinterpret_cast<R>(packet.begin())
-            );
-        }
 
-        template<typename T, MethodPtr<T> M>
-        static void DirectMethodWrapper(
-            void* callee, std::uint64_t data, const Packet packet
-        ) {
-            (static_cast<T*>(callee)->*M)(data, packet);
-        }
-    };
+template<typename T, typename P = std::span<std::byte>>
+concept ListenBus = requires(T& bus, ListenCallback<P> cb) {
+	typename T::ListenHandle;
+	{ bus.Listen(cb) } -> T::ListenHandle;
+};
 
-    class TestCallback : public Callback<bool, const Packet> {
-      public:
-        template<typename T, MethodPtr<T> M>
-        TestCallback(T& instance, std::uint64_t data)
-            : Callback<bool, const Packet>(
-                  &instance, &MethodWrapper<T, M>, data
-              ) {}
+template<typename P = std::span<std::byte>>
+class RequestCallback : public Callback<void, const P> {
 
-      private:
-        template<typename T, MethodPtr<T> M>
-        static bool MethodWrapper(void* callee, const Packet packet) {
-            return (static_cast<T*>(callee)->*M)(packet);
-        }
-    };
+};
 
-    class RequestHandleData {
-        friend Bus;
+template<typename T, typename I = std::uint32_t, typename Req = std::span<std::byte>, typename Res = std::span<std::byte>>
+concept RequestBus = requires(T& bus, const I& i, const Req& req, RequestCallback<Res> cb) {
+	typename T::RequestHandle;
+	{ bus.Request(i, req, cb) } -> T::RequestHandle;
+};
 
       public:
         constexpr bool Complete() const { return m_complete; }
+template<typename Req = std::span<std::byte>, typename Res = std::span<std::byte>>
+class ProcessCallback : public Callback<Res, const Req> {
 
-      private:
-        MessageId       m_id;
-        ProcessCallback m_callback;
-        bool            m_complete;
-    };
-
+};
     using RequestHandle = Handle<RequestHandleData, Bus>;
 
     class ListenHandleData {
@@ -153,5 +122,9 @@ class Bus {
   private:
     RequestHandle::Chain request_chain {};
     ListenHandle::Chain  listen_chain {};
+template<typename T, typename Req = std::span<std::byte>, typename Res = std::span<std::byte>>
+concept ProcessBus = requires(T& bus, ProcessCallback<Req, Res> cb) {
+	typename T::ProcessHandle;
+	{ bus.Process(cb) } -> T::ProcessHandle;
 };
 }  // namespace obc
