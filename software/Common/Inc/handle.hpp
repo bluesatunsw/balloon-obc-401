@@ -34,12 +34,17 @@ class Handle;
 
 template<typename T, typename L = SpinLock>
 class HandleChainRoot {
-    friend class Handle<T>;
-
   public:
+    class Iter;
+    friend class Iter;
+
     HandleChainRoot() = default;
 
     class Iter {
+      private:
+        Handle<T, L>*       m_curr {nullptr};
+        std::unique_lock<L> m_lock {};
+
         friend HandleChainRoot;
 
       public:
@@ -55,21 +60,21 @@ class HandleChainRoot {
         Iter(Iter&& other)            = default;
         Iter& operator=(Iter&& other) = default;
 
-        T* operator->() { return &m_curr.m_payload; }
+        T* operator->() { return &m_curr->m_payload; }
 
-        T& operator*() const { return m_curr.m_payload; }
+        T& operator*() const { return m_curr->m_payload; }
 
         bool operator==(const std::nullptr_t) const noexcept {
-            return m_curr = nullptr;
+            return m_curr == nullptr;
         }
 
         Iter& operator++() {
-            // No nothm_curring if already at end
+            // No nothing if already at end
             if (!m_curr) return *this;
 
-            m_curr = m_curr.m_next.ptr;
+            m_curr = m_curr->m_next.ptr;
             if (m_curr) {
-                std::unique_lock<L> next_lock(m_curr.m_next.lock);
+                std::unique_lock<L> next_lock(m_curr->m_next.lock);
                 m_lock.swap(next_lock);
             } else {
                 m_lock.unlock();
@@ -82,41 +87,24 @@ class HandleChainRoot {
 
       private:
         Iter(HandleChainRoot& root)
-            : m_curr(root.m_next.ptr), m_lock(m_curr.m_next.lock) {}
-
-        Handle*             m_curr {nullptr};
-        std::unique_lock<L> m_lock {};
+            : m_curr(root.m_next.ptr), m_lock(m_curr->m_next.lock) {}
     };
 
     Iter begin() { return Iter(*this); }
 
     std::nullptr_t end() { return nullptr; }
 
-  private:
+  protected:
     struct {
-        Handle<T>* ptr {nullptr};
-        L          lock {};
+        Handle<T, L>* ptr {nullptr};
+        L             lock {};
     } m_next;
 };
 
-template<typename T, typename L = SpinLock>
+template<typename T, typename L>
 class Handle : private HandleChainRoot<T, L> {
     // Inherits from roots as the root is *just* a node with no payload or
     // previous element
-
-  public:
-    Handle(HandleChainRoot<T>& root, T& payload)
-        : m_payload(payload), Handle(root) {}
-
-    Handle(HandleChainRoot<T>& root, T&& payload)
-        : m_payload(payload), Handle(root) {}
-
-    Handle(Handle<T>& prev, T& payload) : m_payload(payload), Handle(root) {}
-
-    Handle(Handle<T>& prev, T&& payload) : m_payload(payload), Handle(root) {}
-
-    Handle(const Handle& other)            = delete;
-    Handle& operator=(const Handle& other) = delete;
 
 #define ACQUIRE_CELL_IF(NAME, SRC, DIRECTION, COND)                \
     auto                NAME {SRC.ptr};                            \
@@ -129,6 +117,28 @@ class Handle : private HandleChainRoot<T, L> {
 #define ACQUIRE_CELL(NAME, SRC, DIRECTION) \
     ACQUIRE_CELL_IF(NAME, SRC, DIRECTION, true)
 
+  public:
+    Handle(HandleChainRoot<T, L>& root, T&& payload) : m_payload(payload) {
+        while (true) {
+            std::scoped_lock this_lock(this->m_prev.lock, this->m_next.lock);
+            ACQUIRE_CELL(next, root.m_next, prev);
+
+            if (next) {
+                next->m_prev.ptr = this->m_next;
+                this->m_next.ptr = next;
+            }
+
+            root.m_next.ptr  = this;
+            this->m_prev.ptr = root;
+            break;
+        }
+    }
+
+    Handle(Handle<T, L>& prev, T&& payload) : Handle(prev, payload) {}
+
+    Handle(const Handle& other)            = delete;
+    Handle& operator=(const Handle& other) = delete;
+
     Handle(const Handle&& other) noexcept {
         while (true) {
             std::scoped_lock other_lock(other.m_next.lock, other.m_prev.lock);
@@ -137,12 +147,12 @@ class Handle : private HandleChainRoot<T, L> {
 
             if (prev) {
                 prev->m_next.ptr = this;
-                m_prev.ptr       = prev;
+                this->m_prev.ptr = prev;
             }
 
             if (next) {
                 next->m_prev.ptr = this;
-                m_next.ptr       = next;
+                this->m_next.ptr = next;
             }
 
             // Move into uninitialised memory
@@ -157,14 +167,15 @@ class Handle : private HandleChainRoot<T, L> {
         // payload to this
         while (true) {
             std::scoped_lock this_lock(
-                m_next.lock, m_prev.lock, other.m_prev.lock, other.m_next.lock
+                this->m_next.lock, this->m_prev.lock, other.m_prev.lock,
+                other.m_next.lock
             );
 
             // Deal with the case where this and other are adjacent  nodes
-            bool next_is_other {m_next.ptr == &other};
-            bool prev_is_other {m_prev.ptr == &other};
-            ACQUIRE_CELL_IF(this_prev, m_prev, next, prev_is_other);
-            ACQUIRE_CELL_IF(this_next, m_next, prev, next_is_other);
+            bool next_is_other {this->m_next.ptr == &other};
+            bool prev_is_other {this->m_prev.ptr == &other};
+            ACQUIRE_CELL_IF(this_prev, this->m_prev, next, prev_is_other);
+            ACQUIRE_CELL_IF(this_next, this->m_next, prev, next_is_other);
             ACQUIRE_CELL_IF(other_prev, other.m_prev, next, next_is_other);
             ACQUIRE_CELL_IF(other_next, other.m_next, prev, prev_is_other);
 
@@ -177,10 +188,12 @@ class Handle : private HandleChainRoot<T, L> {
 
     ~Handle() {
         while (true) {
-            std::scoped_lock this_lock(m_next.m_lock, m_prev.m_lock);
+            std::scoped_lock this_lock(
+                this->m_next.m_lock, this->m_prev.m_lock
+            );
 
-            ACQUIRE_CELL(prev, m_prev, next);
-            ACQUIRE_CELL(next, m_next, prev);
+            ACQUIRE_CELL(prev, this->m_prev, next);
+            ACQUIRE_CELL(next, this->m_next, prev);
 
             if (next) next->m_prev.ptr = prev;
             if (prev) prev->m_next.ptr = next;
@@ -188,27 +201,11 @@ class Handle : private HandleChainRoot<T, L> {
     }
 
   private:
-    Handle(HandleChainRoot<T>& prev) {
-        while (true) {
-            std::scoped_lock prev_lock(prev.m_next.lock);
-            ACQUIRE_CELL(next, prev.m_next, m_prev);
-
-            if (next) {
-                next->m_prev.ptr = m_next;
-                m_next.ptr       = next;
-            }
-
-            prev.m_next.ptr = this;
-            m_prev.ptr      = prev;
-            break;
-        }
-    }
-
 #undef ACQUIRE_CELL
 
     struct {
-        HandleChainRoot<T>* ptr {nullptr};
-        L                   lock {};
+        HandleChainRoot<T, L>* ptr {nullptr};
+        L                      lock {};
     } m_prev;
 
     T m_payload;

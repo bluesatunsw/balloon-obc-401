@@ -37,7 +37,7 @@ CriticalGuard::~CriticalGuard() { taskEXIT_CRITICAL(); }
 
 void SpinLock::lock() {
     taskENTER_CRITICAL();
-    while (m_lock.test_and_set(kstd::memory_order_acquire)) {
+    while (m_lock.test_and_set(std::memory_order_acquire)) {
         while (m_lock.test(std::memory_order_relaxed)) {}
     }
 }
@@ -49,7 +49,7 @@ void SpinLock::unlock() {
 
 bool SpinLock::try_lock() {
     taskENTER_CRITICAL();
-    if (m_lock.test_and_set(kstd::memory_order_acquire)) {
+    if (m_lock.test_and_set(std::memory_order_acquire)) {
         // Failed to acquire
         taskEXIT_CRITICAL();
         return false;
