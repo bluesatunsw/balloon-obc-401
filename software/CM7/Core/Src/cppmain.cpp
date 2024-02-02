@@ -23,23 +23,21 @@
 #include <cstddef>
 
 #include "bus.hpp"
+#include "callback.hpp"
 #include "watched_task.hpp"
 
-class DummyBus : public obc::Bus,
-                 public obc::StackTask<>,
-                 public obc::WatchedTask {
+class DummyBus : public obc::StackTask<>,
+                 public obc::WatchedTask,
+                 public obc::ListenBusMixin<DummyBus> {
+    using Identifier = std::uint32_t;
+    using Packet     = std::span<std::byte>;
+
     void Run() override {
         // Recieve message
         std::array<std::byte, 12> msg {
             std::byte {'H'}, std::byte {'e'}, std::byte {'l'}, std::byte {'l'},
             std::byte {'o'}, std::byte {' '}, std::byte {'W'}, std::byte {'o'},
             std::byte {'r'}, std::byte {'l'}, std::byte {'d'}, std::byte {'!'}};
-
-        ProcessMessage(msg, 42);
-    }
-
-    MessageId SendImpl(Packet message) override {
-        // TODO: do nothing
     }
 
     constexpr const char* Name() const override { return "Dummy Bus"; }
@@ -56,9 +54,7 @@ struct StaticData {
     struct {
     } subsystems;
 
-    std::array<std::reference_wrapper<obc::WatchedTask>, 1> watchlist {
-        busses.dummy};
-    obc::WatchdogTask watchdog {watchlist};
+    // obc::WatchdogTask watchdog {watchlist};
 };
 
 alignas(StaticData) std::byte static_buf[sizeof(StaticData)];

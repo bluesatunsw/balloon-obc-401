@@ -30,7 +30,7 @@ class Callback {
     template<typename T>
     using MethodPtr = R (T::*)(As...);
     template<typename D, typename T>
-        requires sizeof(D) == sizeof(m_data)
+        requires(sizeof(D) == sizeof(void*))
     using MethodPtrData = R(T::*)(D, As...);
 
     R operator()(As... args) { return m_method(m_callee, m_data, args...); }
@@ -39,11 +39,11 @@ class Callback {
     Callback(T& instance)
         : m_callee(&instance), m_method(&MethodWrapper<T, M>) {}
 
-    template<typename D, typename T, MethodPtr<T, D> M>
-        requires sizeof(D) == sizeof(m_data)
+    template<typename D, typename T, MethodPtr<T> M>
+        requires(sizeof(D) == sizeof(void*))
     Callback(T& instance, D data)
         : m_callee(&instance), m_method(&MethodWrapperData<D, T, M>),
-          m_data(data) {}
+          m_data(reinterpret_cast<void*>(data)) {}
 
   private:
     template<typename T, MethodPtr<T> M>
