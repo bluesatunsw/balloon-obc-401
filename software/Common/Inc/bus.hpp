@@ -29,102 +29,67 @@
 #include "handle.hpp"
 
 namespace obc {
-template<typename T, typename I = std::uint32_t, typename P = std::span<std::byte>>
+// Send
+template<
+    typename T, typename I = std::uint32_t, typename P = std::span<std::byte>>
 concept SendBus = requires(T& bus, const I& i, const P& p) {
-	{ bus.Send(i, p) } -> void;
-};
+    typename T::Identifier;
+    typename T::Packet;
 
-template<typename P = std::span<std::byte>>
-class ListenCallback : public Callback<void, const P> {
+    { bus.Send(i, p) } -> void;
+} && std::convertible_to<I, T::Identifier> && std::convertible_to<P, T::Packet>;
 
-};
+// Listen
+template<typename I = std::uint32_t, ypename P = std::span<std::byte>>
+using ListenCallback = Callback<void, const I, const P>;
 
-
-template<typename T, typename P = std::span<std::byte>>
+template<
+    typename T, typename I = std::uint32_t, typename P = std::span<std::byte>>
 concept ListenBus = requires(T& bus, ListenCallback<P> cb) {
-	typename T::ListenHandle;
-	{ bus.Listen(cb) } -> T::ListenHandle;
-};
+    typename T::Identifier;
+    typename T::Packet;
+    typename T::ListenHandle;
 
+    { bus.Listen(cb) } -> T::ListenHandle;
+} && std::convertible_to<I, T::Identifier> && std::convertible_to<P, T::Packet>;
+
+// Request
 template<typename P = std::span<std::byte>>
-class RequestCallback : public Callback<void, const P> {
+using RequestCallback = Callback<void, const P>;
 
-};
+template<
+    typename T, typename I = std::uint32_t, typename Req = std::span<std::byte>,
+    typename Res = std::span<std::byte>>
+concept RequestBus =
+    requires(T& bus, const I& i, const Req& req, RequestCallback<Res> cb) {
+        typename T::Identifier;
+        typename T::RequestPacket;
+        typename T::ResponsePacket;
+        typename T::RequestHandle;
 
-template<typename T, typename I = std::uint32_t, typename Req = std::span<std::byte>, typename Res = std::span<std::byte>>
-concept RequestBus = requires(T& bus, const I& i, const Req& req, RequestCallback<Res> cb) {
-	typename T::RequestHandle;
-	{ bus.Request(i, req, cb) } -> T::RequestHandle;
-};
+        { bus.Request(i, req, cb) } -> T::RequestHandle;
+    } && std::convertible_to<I, T::Identifier> &&
+    std::convertible_to<Req, T::RequestPacket> &&
+    std::convertible_to<Res, T::ResponsePacket>;
 
-      public:
-        constexpr bool Complete() const { return m_complete; }
-template<typename Req = std::span<std::byte>, typename Res = std::span<std::byte>>
-class ProcessCallback : public Callback<Res, const Req> {
+// Process
+template<
+    typename I = std::unit32_t, typename Req = std::span<std::byte>,
+    typename Res = std::span<std::byte>>
+using RequestCallback = Callback<Res, const I, const Req>;
 
-};
-    using RequestHandle = Handle<RequestHandleData, Bus>;
+template<
+    typename T, typename Req = std::span<std::byte>,
+    typename Res = std::span<std::byte>>
+concept ProcessBus =
+    requires(T& bus, ProcessCallback<Req, Res> cb) {
+        typename T::Identifier;
+        typename T::RequestPacket;
+        typename T::ResponsePacket;
+        typename T::ProcessHandle;
 
-    class ListenHandleData {
-        friend Bus;
-
-      private:
-        TestCallback    m_test;
-        ProcessCallback m_process;
-    };
-
-    using ListenHandle = Handle<ListenHandleData, Bus>;
-
-    void Send(Packet message);
-
-    template<typename T>
-    void Send(const T& message) {
-        Send(std::span(reinterpret_cast<std::byte*>(&message), sizeof(message))
-        );
-    }
-
-    RequestHandle Request(Packet request, ProcessCallback callback);
-
-    template<typename T>
-    RequestHandle Request(const T& request, ProcessCallback callback) {
-        return Request(
-            std::span(reinterpret_cast<std::byte*>(&request), sizeof(request)),
-            callback
-        );
-    }
-
-    ListenHandle Listen(
-        TestCallback test_callback, ProcessCallback process_callback
-    );
-
-  protected:
-    virtual MessageId SendImpl(Packet message) = 0;
-
-    inline void ProcessMessage(Packet message, MessageId id) {
-        for (auto& handler : request_chain) {
-            if (handler.m_id == id) {
-                handler.m_callback(message);
-                handler.m_complete = true;
-                return;
-            }
-        }
-
-        for (auto& handler : request_chain) {
-            if (handler.m_test(message)) {
-                handler.m_process(message);
-                return;
-            }
-        }
-
-        // TODO: log unhandled message
-    }
-
-  private:
-    RequestHandle::Chain request_chain {};
-    ListenHandle::Chain  listen_chain {};
-template<typename T, typename Req = std::span<std::byte>, typename Res = std::span<std::byte>>
-concept ProcessBus = requires(T& bus, ProcessCallback<Req, Res> cb) {
-	typename T::ProcessHandle;
-	{ bus.Process(cb) } -> T::ProcessHandle;
-};
+        { bus.Process(cb) } -> T::ProcessHandle;
+    } && std::convertible_to<I, T::Identifier> &&
+    std::convertible_to<Req, T::RequestPacket> &&
+    std::convertible_to<Res, T::ResponsePacket>;
 }  // namespace obc

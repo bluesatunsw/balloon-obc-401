@@ -24,7 +24,9 @@
 
 namespace obc {
 Timeout::Timeout(units::microseconds<float> period)
-    : m_period(static_cast<TickType_t>((period / units::hertz<float>(configTICK_RATE_HZ)).value())) {
+    : m_period(static_cast<TickType_t>(
+          (period / units::hertz<float>(configTICK_RATE_HZ)).value()
+      )) {
     vTaskSetTimeOutState(&m_timeout);
 }
 
@@ -38,8 +40,7 @@ void Timeout::Block() {
 
 Timeout::Guard::Guard(Timeout timeout) : m_timeout(timeout) {}
 
-Timeout::Guard::Guard(units::microseconds<float> period)
-    : m_timeout(period) {}
+Timeout::Guard::Guard(units::microseconds<float> period) : m_timeout(period) {}
 
 Timeout::Guard::~Guard() { m_timeout.Block(); }
 }  // namespace obc
