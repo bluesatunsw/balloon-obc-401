@@ -26,21 +26,38 @@ namespace obc {
 template<typename R, typename... As>
 class Callback {
   public:
-    using MethodWrapperPtr = R (*)(void*, std::uint64_t, As...);
+    using MethodWrapperPtr = R (*)(void*, void*, As...);
     template<typename T>
     using MethodPtr = R (T::*)(As...);
-    template<typename T, typename... Us>
-    using MethodPtrAlt = R (T::*)(Us...);
+    template<typename D, typename T>
+        requires sizeof(D) == sizeof(m_data)
+    using MethodPtrData = R(T::*)(D, As...);
 
     R operator()(As... args) { return m_method(m_callee, m_data, args...); }
 
-  protected:
-    Callback(void* callee, MethodWrapperPtr method, std::uint64_t data)
-        : m_callee {callee}, m_method {method}, m_data {data} {}
+    template<typename T, MethodPtr<T> M>
+    Callback(T& instance)
+        : m_callee(&instance), m_method(&MethodWrapper<T, M>) {}
+
+    template<typename D, typename T, MethodPtr<T, D> M>
+        requires sizeof(D) == sizeof(m_data)
+    Callback(T& instance, D data)
+        : m_callee(&instance), m_method(&MethodWrapperData<D, T, M>),
+          m_data(data) {}
 
   private:
+    template<typename T, MethodPtr<T> M>
+    static void MethodWrapper(void* callee, void* data, As... args) {
+        (static_cast<T*>(callee)->*M)(args...);
+    }
+
+    template<typename D, typename T, MethodPtrData<D, T> M>
+    static void MethodWrapperData(void* callee, void* data, As... args) {
+        (static_cast<T*>(callee)->*M)(reinterpret_cast<D>(data), args...);
+    }
+
     void*            m_callee {nullptr};
     MethodWrapperPtr m_method {nullptr};
-    std::uint64_t    m_data {};
+    void*            m_data {nullptr};
 };
 }  // namespace obc

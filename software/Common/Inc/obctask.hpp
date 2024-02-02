@@ -24,13 +24,12 @@
 #include <optional>
 #include <span>
 
+#include <units/time.h>
+
 #include "FreeRTOS.h"
 #include "cmsis_os.h"
-#include "task.h"
-
 #include "delay.hpp"
-
-#include <units/time.h>
+#include "task.h"
 
 namespace obc {
 class Task {
@@ -56,9 +55,7 @@ class Task {
 
     inline virtual std::span<StackType_t> Stack() { return {}; }
 
-    constexpr virtual osPriority Priority() const {
-        return osPriorityNormal;
-    }
+    constexpr virtual osPriority Priority() const { return osPriorityNormal; }
 
     constexpr virtual units::microseconds<float> NominalPeriod() const {
         return units::microseconds<float>(0);
@@ -68,9 +65,9 @@ class Task {
     inline static void RTOSTask(void* instance) {
         while (true) {
             // TODO: Eliminate extra layer of indirection
-        	auto task = static_cast<Task*>(instance);
-            Timeout::Guard timeout{task->NominalPeriod()};
-        	task->Run();
+            auto           task = static_cast<Task*>(instance);
+            Timeout::Guard timeout {task->NominalPeriod()};
+            task->Run();
         }
 
         vTaskDelete(NULL);

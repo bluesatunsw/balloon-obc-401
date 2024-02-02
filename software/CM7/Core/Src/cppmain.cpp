@@ -63,7 +63,5 @@ struct StaticData {
 
 alignas(StaticData) std::byte static_buf[sizeof(StaticData)];
 extern "C" {
-void CppMain() {
-    auto& static_data = *(new (static_buf) StaticData);
-}
+void CppMain() { auto& static_data = *(new (static_buf) StaticData); }
 }

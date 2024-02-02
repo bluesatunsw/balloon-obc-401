@@ -61,7 +61,7 @@ class WatchedTask : public virtual Task {
     }
 
     units::microseconds<float> m_timer {0};
-    bool                           m_fault {false};
+    bool                       m_fault {false};
 };
 
 constexpr std::uint32_t WatchdogStackSize = 512;
