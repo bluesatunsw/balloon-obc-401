@@ -20,7 +20,7 @@
 
 #pragma once
 
-namespace obc {
+namespace obc::monitoring {
 class LoggerStream {};
 
 class Logger {

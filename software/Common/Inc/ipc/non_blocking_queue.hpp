@@ -20,39 +20,13 @@
 
 #pragma once
 
-#include <atomic>
-#include <mutex>
+#include <array>
 
-#include "FreeRTOS.h"
-#include "semphr.h"
-
-namespace obc {
-class Mutex {
+namespace obc::ipc {
+template<typename T, size_t S>
+class NonBlockingQueue {
   public:
-    Mutex();
-
-    void lock();
-    void unlock();
-    bool try_lock();
-
-  private:
-    SemaphoreHandle_t m_handle;
-    StaticSemaphore_t m_data;
-};
-
-class CriticalGuard {
-  public:
-    CriticalGuard();
-    ~CriticalGuard();
-};
-
-class SpinLock {
-  public:
-    void lock();
-    void unlock();
-    bool try_lock();
-
-  private:
-    std::atomic_flag m_lock {false};
+    void push(T x);
+    T    pop();
 };
 }  // namespace obc

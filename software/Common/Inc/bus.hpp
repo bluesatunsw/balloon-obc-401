@@ -26,154 +26,337 @@
 #include <optional>
 #include <span>
 
-#include "callback.hpp"
-#include "handle.hpp"
+#include "ipc/callback.hpp"
+#include "utils/handle.hpp"
 
-namespace obc {
-// Send
-template<
-    typename T, typename I = std::uint32_t, typename P = std::span<std::byte>>
-concept SendBus =
-    requires(T& bus, const I& i, const P& p) {
-        typename T::Identifier;
-        typename T::Packet;
+/**
+ * @brief Defines a common interface for communication buses.
+ *
+ * The purpose of a bus is to abstract the network stack up to, but not
+ * including, the application layer. Operations are defined in terms of
+ * concepts, allowing implementers to choose a subset of supported operations
+ * and users to select a subset of required operations. Mixins are provided to
+ * aid in implementing some bus operations, though their use is optional.
+ *
+ * @warning Given its rarity in the majority of embedded communication
+ * standards, and due to its limited utility and the complexity of
+ * implementation, socket-style interfaces are not supported.
+ *
+ * Operations involve sending and/or receiving messages. The specific type of
+ * message is a template parameter, allowing for additional functionality or
+ * metadata to be provided. This approach is preferred over creating additional
+ * functions to ensure consistency.
+ *
+ * TODO: Add error reporting.
+ */
+namespace obc::bus {
+/**
+ * @brief Represents a message sent or received by a bus.
+ *
+ * Must include an address and data (payload).
+ *
+ * @warning Addresses do not necessarily correspond to a single physical device
+ * (or any device at all); buses may define implementation-specific addresses
+ * that additional provide functionalities, including but not limited to:
+ * multicasting, loopback, and voiding.
+ */
+template<typename T>
+concept Message = requires(T& msg) {
+    typename T::Address;
+    typename T::Data;
 
-        { bus.Send(i, p) } -> std::same_as<void>;
-    } && std::convertible_to<I, typename T::Identifier> &&
-    std::convertible_to<P, typename T::Packet>;
+    { msg.address } -> std::same_as<typename T::Address&>;
+    { msg.data } -> std::same_as<typename T::Data&>;
+} && std::regular<typename T::Address> && std::semiregular<typename T::Data>;
 
-// Listen
-template<typename I = std::uint32_t, typename P = std::span<std::byte>>
-using ListenCallback = Callback<void, const I, const P>;
+/**
+ * @brief Represents a generic message type.
+ *
+ * If there are no special requirements, this should be used as the type for all
+ * bus operations. Where feasible, more specialized message types should be
+ * convertible to and from this basic message type, allowing users to ignore
+ * more advanced functionality if not required.
+ */
+struct BasicMessage {
+    using Address = std::uint32_t;
+    using Data    = std::span<std::byte>;
 
-template<
-    typename T, typename I = std::uint32_t, typename P = std::span<std::byte>>
+    Address address;
+    Data    data;
+};
+
+/**
+ * @brief Represents a bus that can send packets of data to an address.
+ *
+ * Includes a function `Send(msg)` for sending a message on the bus.
+ *
+ * @tparam M The type of message to send.
+ */
+template<typename T, typename M = BasicMessage>
+concept SendBus = requires(T& bus, const M& msg) {
+    { bus.Send(msg) } -> std::same_as<void>;
+} && Message<M>;
+
+/**
+ * @brief Represents a bus that can listen to all received messages.
+ *
+ * Includes a function `Listen(cb)` for registering a listener callback that is
+ * invoked for every incoming message.
+ *
+ * @tparam M The type of message received.
+ */
+template<typename T, typename M = BasicMessage>
 concept ListenBus =
-    requires(T& bus, ListenCallback<P> cb) {
-        typename T::Identifier;
-        typename T::Packet;
+    requires(T& bus, ipc::Callback<void, const M&>::DummySource cb) {
         typename T::ListenHandle;
 
-        { bus.Listen(cb) } -> std::same_as<typename T::ListenHandle>;
-    } && std::convertible_to<I, typename T::Identifier> &&
-    std::convertible_to<P, typename T::Packet>;
+        { bus.Listen(cb.Func) } -> std::same_as<typename T::ListenHandle>;
+    } && std::semiregular<typename T::ListenHandle> && Message<M>;
 
-template<
-    typename B, typename I = std::uint32_t, typename P = std::span<std::byte>>
+/**
+ * @brief A helper class for implementing listening functionality.
+ *
+ * `FeedListeners` should be called for each incoming message.
+ *
+ * @tparam M The type of message received.
+ */
+template<Message M = BasicMessage>
 class ListenBusMixin {
-    using ThisListenCallback = ListenCallback<I, P>;
+    using ListenCallback = ipc::Callback<void, const M&>;
 
   public:
-    using ListenHandle = Handle<ThisListenCallback>;
+    using ListenHandle = utils::Handle<ListenCallback>;
 
-    ListenHandle Listen(ThisListenCallback& cb) {
-        return ListenHandle(m_listen_callbacks, cb);
+    /**
+     * @brief Adds a listener to be notified upon receiving a message.
+     *
+     * @param cb The listener callback to add.
+     * @return An opaque handle that must be retained for the listener to remain
+     * active.
+     */
+    ListenHandle Listen(ListenCallback cb) {
+        return ListenHandle(m_listeners, cb);
     }
 
   protected:
-    void FeedListeners(I i, P p) {
-        for (auto& callback : m_listen_callbacks) callback(i, p);
+    /**
+     * @brief Forwards a message to all listeners.
+     *
+     * Should be called upon receiving any incoming message.
+     *
+     * @param msg The message to be forwarded.
+     */
+    void FeedListeners(const M& msg) {
+        for (const auto& callback : m_listeners) callback(msg);
     }
 
   private:
-    HandleChainRoot<ThisListenCallback> m_listen_callbacks;
+    utils::HandleChainRoot<ListenCallback> m_listeners;
 };
 
-// Request
-template<typename I = std::uint32_t, typename P = std::span<std::byte>>
-using RequestCallback = Callback<void, const I, const P>;
-
-template<
-    typename T, typename I = std::uint32_t, typename Req = std::span<std::byte>,
-    typename Res = std::span<std::byte>>
+/**
+ * @brief Represents a bus capable of requesting data from a remote device.
+ *
+ * Includes a function `Request(req, cb)` for sending a request and registering
+ * a callback that is invoked when a response arrives. Multiple responses per
+ * request are allowed.
+ *
+ * @tparam Req The type of message sent to request data.
+ * @tparam Res The type of message received in response.
+ */
+template<typename T, typename Req = BasicMessage, typename Res = BasicMessage>
 concept RequestBus =
-    requires(T& bus, const I& i, const Req& req, RequestCallback<Res> cb) {
-        typename T::Identifier;
-        typename T::RequestPacket;
-        typename T::ResponsePacket;
+    requires(
+        T& bus, const Req& req, ipc::Callback<void, const Res&>::DummySource cb
+    ) {
         typename T::RequestHandle;
 
-        { bus.Request(i, req, cb) } -> std::same_as<typename T::RequestHandle>;
-    } && std::convertible_to<I, typename T::Identifier> &&
-    std::convertible_to<Req, typename T::RequestPacket> &&
-    std::convertible_to<Res, typename T::ResponsePacket>;
+        {
+            bus.Request(req, cb.Func)
+        } -> std::same_as<typename T::RequestHandle>;
+    } &&
+    std::semiregular<typename T::RequestHandle> && Message<Req> && Message<Res>;
 
+/**
+ * @brief Represents a callable that returns a bool in response to a packet.
+ *
+ * Used to match an arbitrary criteria on a packet to filter them.
+ */
+template<typename T, typename M = BasicMessage>
+concept MessageFilter = requires(T& filter, const M& msg) {
+    { filter(msg) } -> std::convertible_to<bool>;
+} && std::semiregular<T> && Message<M>;
+
+/**
+ * @brief Specifies the required methods for the class \ref RequestBusMixin is
+ * applied to.
+ *
+ * Must define `IssueRequest`, a function that dispatches the request to the
+ * bus; it should return a filter that identifies the response to the
+ * request.
+ *
+ * @tparam Req The type of message sent to request data.
+ * @tparam Res The type of message received in response.
+ * @tparam Flt The object used to determine if an incoming message is a response
+ */
 template<
-    typename B, typename I = std::uint32_t, typename Req = std::span<std::byte>,
-    typename Res = std::span<std::byte>>
+    typename T, typename Req = BasicMessage, typename Res = BasicMessage,
+    typename Flt = ipc::Callback<bool, const Res&>>
+concept RequestBusMixinRequirements = requires(T& bus, const Req& req) {
+    { bus.IssueRequest(req) } -> std::same_as<Flt>;
+} && Message<Req> && Message<Res> && MessageFilter<Flt>;
+
+/**
+ * @brief A helper class for implementing request functionality.
+ *
+ * @tparam D CRTP derived class, must satisfy \ref RequestBusMixinRequirements.
+ * @tparam Req The type of message sent to request data.
+ * @tparam Res The type of message received in response.
+ * @tparam Flt The object used to determine if an incoming message is a response
+ * to a particular request.
+ */
+template<
+    typename D, Message Req = BasicMessage, Message Res = BasicMessage,
+    MessageFilter<Res> Flt = ipc::Callback<bool, const Res&>>
 class RequestBusMixin {
-    using ThisRequestCallback = RequestCallback<I, Res>;
+    using RequestCallback = ipc::Callback<void, const Res&>;
 
     struct RequestHandleData {
-        B::RequestReponseFilter filter;
-        ThisRequestCallback     callback;
+        Flt             filter;
+        RequestCallback callback;
     };
 
   public:
-    using RequestHandle = Handle<RequestHandleData>;
+    using RequestHandle = utils::Handle<RequestHandleData>;
 
-    RequestHandle Request(I i, Req req, ThisRequestCallback& cb) {
+    /**
+     * @brief Sends a request on the bus.
+     *
+     * @param req The request message.
+     * @param cb The callback to be invoked upon receiving the response.
+     * @return An opaque handle that must be retained until the request is
+     * fulfilled or the response is no longer desired.
+     */
+    RequestHandle Request(const Req& req, RequestCallback cb) {
         return RequestHandle(
-            m_request_callbacks,
+            m_request_handlers,
             {
-                .filter   = static_cast<B*>(this)->SendRequest(i, req),
+                .filter   = Derived().IssueRequest(req),
                 .callback = cb,
             }
         );
     }
 
   protected:
-    void FeedRequesters(I i, Res p) {
-        for (auto& callback : m_request_callbacks)
-            if (callback.filter(i, p)) callback.callback(i, p);
+    /**
+     * @brief Forwards a message to all pending requests.
+     *
+     * Should be called upon receiving any messages that could be responses to a
+     * request.
+     *
+     * @param res The response message to forward.
+     */
+    void FeedRequesters(const Res& res) {
+        for (auto& handler : m_request_handlers)
+            if (handler.data.filter(res)) handler.data.callback(res);
     }
 
   private:
-    HandleChainRoot<RequestHandleData> m_request_callbacks;
+    /**
+     * @brief Safely gets the CRTP derived class.
+     *
+     * @return Reference to derived class.
+     */
+    RequestBusMixinRequirements<Req, Flt> auto& Derived() {
+        return static_cast<D&>(*this);
+    }
+
+    utils::HandleChainRoot<RequestHandleData> m_request_handlers;
 };
 
-// Process
-template<
-    typename I = std::uint32_t, typename Req = std::span<std::byte>,
-    typename Res = std::span<std::byte>>
-using ProcessCallback = Callback<std::optional<Res>, const I, const Req>;
-
-template<
-    typename T, typename I = std::uint32_t, typename Req = std::span<std::byte>,
-    typename Res = std::span<std::byte>>
+/**
+ * @brief Represents a bus capable of responding to received requests.
+ *
+ * Includes a function `Process(cb)` for registering a callback that returns a
+ * response if it can handle a given request.
+ *
+ * @tparam Req The type of message received that requests data.
+ * @tparam Res The type of message sent in response.
+ */
+template<typename T, typename Req = BasicMessage, typename Res = BasicMessage>
 concept ProcessBus =
-    requires(T& bus, ProcessCallback<Req, Res> cb) {
-        typename T::Identifier;
-        typename T::RequestPacket;
-        typename T::ResponsePacket;
+    requires(T& bus, ipc::Callback<std::optional<Res>, Req>::DummySource cb) {
         typename T::ProcessHandle;
 
-        { bus.Process(cb) } -> std::same_as<typename T::ProcessHandle>;
-    } && std::convertible_to<I, typename T::Identifier> &&
-    std::convertible_to<Req, typename T::RequestPacket> &&
-    std::convertible_to<Res, typename T::ResponsePacket>;
+        { bus.Process(cb.Func) } -> std::same_as<typename T::ProcessHandle>;
+    } && std::semiregular<typename T::ProcessHandle> && Message<Req> &&
+    Message<Res>;
 
-template<
-    typename B, typename I = std::uint32_t, typename Req = std::span<std::byte>,
-    typename Res = std::span<std::byte>>
+/**
+ * @brief Specifies the required methods for the class \ref ProcessBusMixin is
+ * applied to.
+ *
+ * Must define `IssueResponse`, a function that dispatches the response to
+ * the bus.
+ *
+ * @tparam Req The type of message received that requests data.
+ * @tparam Res The type of message sent in response.
+ */
+template<typename T, typename Req = BasicMessage, typename Res = BasicMessage>
+concept ProcessBusMixinRequirements =
+    requires(T& bus, const Req& req, const Res& res) {
+        { bus.IssueResponse(req, res) } -> std::same_as<void>;
+    } && Message<Req> && Message<Res>;
+
+/**
+ * @brief A helper class for implementing processing functionality.
+ *
+ * @tparam D CRTP derived class, must satisfy \ref ProcessBusMixinRequirements.
+ * @tparam Req The type of message received that requests data.
+ * @tparam Res The type of message sent in response.
+ */
+template<typename D, Message Req = BasicMessage, Message Res = BasicMessage>
 class ProcessBusMixin {
-    using ThisProcessCallback = ProcessCallback<I, Req, Res>;
+    using ProcessCallback = ipc::Callback<std::optional<Res>, Req>;
 
   public:
-    using ProcessHandle = Handle<ThisProcessCallback>;
+    using ProcessHandle = utils::Handle<ProcessCallback>;
 
-    ProcessHandle Process(I i, Req req, ThisProcessCallback& cb) {
-        return ProcessHandle(m_processor_callbacks, cb);
+    /**
+     * @brief Registers a processor callback.
+     *
+     * @param cb The callback to be invoked upon receiving a message that may be
+     * a request.
+     * @return An opaque handle that must be retained for the processor to
+     * remain active.
+     */
+    ProcessHandle Process(ProcessCallback cb) {
+        return ProcessHandle(m_processors, cb);
     }
 
   protected:
-    void FeedProcessors(I i, Req p) {
-        for (auto& callback : m_processor_callbacks)
-            if (auto res = callback(i, p))
-                static_cast<B*>(this)->SendResponse(i, *res);
+    /**
+     * @brief Forwards a message to processors.
+     *
+     * Should be called upon receiving any messages that could be requests.
+     *
+     * @param req The request message to forward.
+     */
+    void FeedProcessors(const Req& req) {
+        for (const auto& processor : m_processors)
+            if (auto res = processor(req)) Derived().IssueResponse(req, *res);
     }
 
   private:
-    HandleChainRoot<ThisProcessCallback> m_processor_callbacks;
+    /**
+     * @brief Safely gets the CRTP derived class.
+     *
+     * @return Reference to derived class.
+     */
+    ProcessBusMixinRequirements<Req, Res> auto& Derived() {
+        return static_cast<D&>(*this);
+    }
+
+    utils::HandleChainRoot<ProcessCallback> m_processors;
 };
-}  // namespace obc
+}  // namespace obc::bus
