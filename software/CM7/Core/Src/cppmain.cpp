@@ -23,15 +23,12 @@
 #include <cstddef>
 
 #include "bus.hpp"
-#include "callback.hpp"
-#include "watched_task.hpp"
+#include "ipc/callback.hpp"
+#include "monitoring/watched_task.hpp"
 
-class DummyBus : public obc::StackTask<>,
-                 public obc::WatchedTask,
-                 public obc::ListenBusMixin<DummyBus> {
-    using Identifier = std::uint32_t;
-    using Packet     = std::span<std::byte>;
-
+class DummyBus : public virtual obc::scheduling::StackTask<>,
+                 public virtual obc::monitoring::WatchedTask,
+                 public obc::bus::ListenBusMixin<> {
     void Run() override {
         // Recieve message
         std::array<std::byte, 12> msg {

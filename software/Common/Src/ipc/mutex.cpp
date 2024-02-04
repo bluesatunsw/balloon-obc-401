@@ -18,9 +18,9 @@
  */
 /* USER CODE END Header */
 
-#include "../Inc/mutex.hpp"
+#include "ipc/mutex.hpp"
 
-namespace obc {
+namespace obc::ipc {
 Mutex::Mutex() : m_handle {xSemaphoreCreateMutexStatic(&m_data)} {}
 
 void Mutex::lock() { xSemaphoreTake(m_handle, portMAX_DELAY); }
