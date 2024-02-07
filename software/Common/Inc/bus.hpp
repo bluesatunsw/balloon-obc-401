@@ -1,6 +1,6 @@
 /* USER CODE BEGIN Header */
 /*
- * 401 Ballon OBC
+ * 401 Balloon OBC
  * Copyright (C) 2023 BLUEsat and contributors
  *
  * This program is free software: you can redistribute it and/or modify it
