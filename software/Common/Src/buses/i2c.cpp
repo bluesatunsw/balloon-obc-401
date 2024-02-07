@@ -35,7 +35,7 @@ void I2CBus::Send(BasicMessage msg, int busNumber) {
 			i2CHandle = &hi2c2;
 		}
 	} else {
-		// TODO throw error
+		// TODO throw error, want to make the return a boolean for success
 	}
 
 	HAL_StatusTypeDef ret = HAL_I2C_Master_Transmit(i2CHandle, msg.Address, msg.data, 1, MAX_WAIT); //Sending in Blocking mode
