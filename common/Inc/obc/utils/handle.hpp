@@ -138,7 +138,7 @@ class HandleChainRoot {
          * @param root Reference to the chain root.
          */
         Iter(HandleChainRoot& root)
-            : m_lock(m_curr.m_next.lock), m_curr(root.m_next.ptr) {
+            : m_lock(m_curr->m_next.lock), m_curr(root.m_next.ptr) {
             // After the pointer to the first real node has safely been
             // acquired, lock the pointer to the next node.
             m_lock.swap(m_curr->m_next.lock);
