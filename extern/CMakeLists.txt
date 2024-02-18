@@ -1,0 +1,7 @@
+project(extern)
+
+set(COMMON_EXTERN_SOURCES "" PARENT_SCOPE)
+set(COMMON_EXTERN_INCLUDES
+    ${PROJECT_SOURCE_DIR}/units/include
+    PARENT_SCOPE
+)
