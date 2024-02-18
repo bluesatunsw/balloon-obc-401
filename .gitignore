@@ -44,3 +44,8 @@
 **/Middlewares/**
 **/Drivers/**
 
+# CMake Files
+**/CMakeFiles/**
+Makefile
+CMakeCache.txt
+cmake_install.cmake
