@@ -2,9 +2,11 @@ project(common)
 
 set(COMMON_COMMON_SOURCES
     ${PROJECT_SOURCE_DIR}/Src/ipc/mutex.cpp
-    ${PROJECT_SOURCE_DIR}/Src/scheduling/delay.cpp
+    ${PROJECT_SOURCE_DIR}/Src/scheduling/delay.cpp   
 )
-set(COMMON_COMMON_INCLUDES ${PROJECT_SOURCE_DIR}/Inc/obc)
+set(COMMON_COMMON_INCLUDES
+    ${PROJECT_SOURCE_DIR}/Inc/obc
+)
 
 set(COMMON_INCLUDES
     ${COMMON_COMMON_INCLUDES} ${COMMON_EXTERN_INCLUDES}
