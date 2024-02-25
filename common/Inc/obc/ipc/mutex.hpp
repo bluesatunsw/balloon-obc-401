@@ -116,4 +116,4 @@ class SpinLock {
   private:
     std::atomic_flag m_lock {false};
 };
-}  // namespace obc
+}  // namespace obc::ipc

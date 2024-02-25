@@ -56,4 +56,4 @@ bool SpinLock::try_lock() {
     }
     return true;
 }
-}  // namespace obc
+}  // namespace obc::ipc

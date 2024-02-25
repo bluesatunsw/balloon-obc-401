@@ -159,7 +159,7 @@ class HandleChainRoot {
      */
     std::nullptr_t end() { return nullptr; }
 
-  protected:
+  public:
     /**
      * @brief Structure to hold the pointer to the next node and a lock for
      * synchronization.
@@ -362,4 +362,4 @@ class Handle : private HandleChainRoot<T, L> {
 
     T m_payload;
 };
-}  // namespace obc
+}  // namespace obc::utils

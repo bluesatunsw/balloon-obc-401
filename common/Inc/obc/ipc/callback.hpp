@@ -20,10 +20,63 @@
 
 #pragma once
 
+#include <atomic>
+#include <concepts>
 #include <cstdint>
+#include <functional>
+#include <mutex>
+#include <optional>
 #include <type_traits>
+#include <variant>
+
+#include "ipc/mutex.hpp"
 
 namespace obc::ipc {
+/**
+ * @brief Wrapper type for data which can be asynchronously set.
+ *
+ * Polling operation can be performed to check/wait for the value.
+ *
+ * @tparam T Type of wrapped value.
+ * @tparam L Lock to use for thread safety.
+ */
+template<typename T, typename L = SpinLock>
+class AsyncValue {
+  public:
+    AsyncValue() = default;
+
+    /**
+     * @brief Assign a result.
+     *
+     * @param data Value to set.
+     *
+     * @warning It is undefined behaviour to assign to an async value twice
+     */
+    void Set(const T& data) {
+        std::scoped_lock lock(m_lock);
+        if (!m_data) m_data = data;
+    }
+
+    /**
+     * @brief Get the underlying value if it exists.
+     *
+     * @return std::nullopt if the value has not yet be set, otherwise a
+     * reference to the value.
+     */
+    std::optional<std::reference_wrapper<T>> operator()() {
+        // Returning a reference to the underlying option would be unsafe
+        std::scoped_lock lock(m_lock);
+        return m_data ? std::optional<std::reference_wrapper<T>>(m_data.value())
+                      : std::optional<std::reference_wrapper<T>>(std::nullopt);
+    }
+
+    void Foo();
+
+  private:
+    std::optional<T> m_data {};
+    L                m_lock {};
+};
+
 /**
  * @brief A type that may be used as the bound argument to a callback.
  *
@@ -37,9 +90,67 @@ namespace obc::ipc {
  */
 template<typename T>
 concept CallbackData = requires {
-	sizeof(T) == sizeof(void*);
-	std::is_trivially_copyable<T>::value;
+    sizeof(T) == sizeof(void*);
+    std::is_trivially_copyable_v<T>;
 };
+
+namespace internal {
+/**
+ * @brief Flag type to indicate a callback with no bound data.
+ */
+struct NoDataFlag {
+    void* pad {nullptr};
+};
+
+/**
+ * @brief Helper container which can eventually be cast into a callback.
+ *
+ * @tparam Mt Type of callback method.
+ * @tparam M Callback method.
+ * @tparam T Class to which the method belongs.
+ * @tparam D Type of the additional argument.
+ */
+template<typename Mt, Mt M, typename T, CallbackData D = NoDataFlag>
+struct CallbackProvider {
+    CallbackProvider(T& inst, D data) : i_(inst), d_(data) {};
+    explicit CallbackProvider(T& inst) : i_(inst), d_() {};
+
+    Mt M_ {M};
+    T& i_;
+    D  d_;
+};
+}  // namespace internal
+
+// TODO: Determine if this is possible with some other method such as template
+// deduction guides instead.
+
+/**
+ * @brief Creates a temporary object which can be converted to a callback when
+ * required.
+ *
+ * @param inst Instance object which this callback is on.
+ * @param fn Member function of callback.
+ */
+#define OBC_CALLBACK_METHOD(inst, fn)                       \
+    obc::ipc::internal::CallbackProvider<                   \
+        decltype(&std::remove_cvref_t<decltype(inst)>::fn), \
+        &std::remove_cvref_t<decltype(inst)>::fn,           \
+        std::remove_cvref_t<decltype(inst)>>(inst)
+
+/**
+ * @see OBC_CALLBACK_METHOD
+ *
+ * Also binds a curries the method with a piece of data passed to the function
+ * as the first argument.
+ *
+ * @param data_type Type of the data to be curried.
+ * @param data Value of the curried data.
+ */
+#define OBC_CALLBACK_CURRIED_METHOD(inst, fn, data_type, data) \
+    obc::ipc::internal::CallbackProvider<                      \
+        decltype(&std::remove_cvref_t<decltype(inst)>::fn),    \
+        &std::remove_cvref_t<decltype(inst)>::fn,              \
+        std::remove_cvref_t<decltype(inst)>, data_type>(inst, data)
 
 /**
  * @brief A member function pointer bound to an object.
@@ -57,32 +168,6 @@ concept CallbackData = requires {
 template<typename R, typename... As>
 class Callback {
   public:
-
-    /**
-     * @brief Pointer to a member function of the correct argument type and
-     * return type.
-     *
-     * @tparam T Class to which the method belongs.
-     *
-     * @warning The types must match exactly; implicit casting is not performed.
-     */
-    template<typename T>
-    using MethodPtr = R (T::*)(As...);
-
-    /**
-     * @brief Pointer to a member function of the correct argument type and
-     * return type, with an additional argument that will be bound and
-     * precedes the unbound argument.
-     *
-     * @tparam D Type of the additional argument.
-     *
-     * @tparam T Class to which the method belongs.
-     *
-     * @warning The types must match exactly; implicit casting is not performed.
-     */
-    template<CallbackData D, typename T>
-    using MethodPtrData = R (T::*)(D, As...);
-
     /**
      * @brief Invokes the callback function.
      *
@@ -93,32 +178,45 @@ class Callback {
     R operator()(As... args) { return m_method(m_callee, m_data, args...); }
 
     /**
-     * @brief Creates a new callback bound to a specific class instance.
+     * @brief Convert a callback provider wrapper into an actual callback type.
      *
-     * @tparam T Class to which the method belongs.
-     * @tparam M Callback method.
+     * @param prov Provider to translate to callback
      *
-     * @param instance Object to which this callback is bound.
+     * @tparam Mt Type of the method pointe
+     * @tparam M Method pointer
+     * @tparam T Instance type
+     * @tparam D Bound data type
+     *
+     * @warning Should not be directly called.
      */
-    template<typename T, MethodPtr<T> M>
-    explicit(false) Callback(T& instance)
-        : m_callee(&instance), m_method(&MethodWrapper<T, M>) {}
+    template<typename Mt, Mt M, typename T, typename D>
+    explicit(false) Callback(internal::CallbackProvider<Mt, M, T, D> prov)
+        requires(std::same_as<D, internal::NoDataFlag>)
+        : m_method(&MethodWrapper<Mt, M, T>), m_callee(&prov.i_) {}
 
     /**
-     * @brief Creates a new callback bound to a specific class instance and
-     * piece of data (as an additional argument).
-     *
-     * @tparam D Type of the additional argument.
-     * @tparam T Class to which the method belongs.
-     * @tparam M Callback method.
-     *
-     * @param instance Object to which this callback is bound.
-     * @param data Additional argument (precedes all others).
+     * @see Callback::Callback
      */
-    template<CallbackData D, typename T, MethodPtr<T> M>
-    Callback(T& instance, D data)
-        : m_callee(&instance), m_method(&MethodWrapperData<D, T, M>),
-          m_data(reinterpret_cast<void*>(data)) {}
+    template<typename Mt, Mt M, typename T, typename D>
+    explicit(false) Callback(internal::CallbackProvider<Mt, M, T, D> prov)
+        requires(!std::same_as<D, internal::NoDataFlag>)
+        : m_method(MethodWrapper<Mt, M, T, D>), m_callee(&prov.i_),
+          m_data(reinterpret_cast<void*>(prov.d_)) {}
+
+    /**
+     * @brief Convert an async value to a callback which sets it.
+     *
+     * @param async Async wrapper the result of the callback will be written to.
+     *
+     * @tparam T Underlying type of async value.
+     * @tparam L Lock used by async wrapper.
+     */
+    template<typename T, typename L = SpinLock>
+    explicit(false) Callback(AsyncValue<T, L>& async)
+        : m_method(&MethodWrapper<
+                   decltype(&AsyncValue<T, L>::Set), &AsyncValue<T, L>::Set,
+                   AsyncValue<T, L>>),
+          m_callee(&async) {}
 
     /**
      * @brief Dummy class which contain a function convertible to this kind
@@ -142,6 +240,12 @@ class Callback {
         virtual R Func(As... args) final = 0;
     };
 
+    /**
+     * @brief Callback provider associated with this type's dummy source.
+     */
+    using DummyProvider = internal::CallbackProvider<
+        decltype(&DummySource::Func), &DummySource::Func, DummySource>;
+
   private:
     /*
      * Internally, C-style function pointers are used to store the function to
@@ -156,14 +260,16 @@ class Callback {
      * unchanged.
      */
 
-    template<typename T, MethodPtr<T> M>
-    static void MethodWrapper(void* callee, void* data, As... args) {
-        (static_cast<T*>(callee)->*M)(args...);
+    template<typename Mt, Mt M, typename T>
+    static R MethodWrapper(void* callee, void* data, As... args) {
+        return (static_cast<T*>(callee)->*M)(args...);
     }
 
-    template<CallbackData D, typename T, MethodPtrData<D, T> M>
-    static void MethodWrapperData(void* callee, void* data, As... args) {
-        (static_cast<T*>(callee)->*M)(reinterpret_cast<D>(data), args...);
+    template<typename Mt, Mt M, typename T, CallbackData D>
+    static R MethodWrapper(void* callee, void* data, As... args) {
+        return (static_cast<T*>(callee)->*M)(
+            reinterpret_cast<D>(data), args...
+        );
     }
 
     using MethodWrapperPtr = R (*)(void*, void*, As...);
@@ -174,4 +280,7 @@ class Callback {
     /// Generic storage for the additional bound argument.
     void*            m_data {nullptr};
 };
+
+template<typename T, typename R, typename... As>
+concept CallbackSource = std::convertible_to<T, Callback<R, As...>>;
 }  // namespace obc::ipc

@@ -28,6 +28,7 @@
 
 #include "FreeRTOS.h"
 #include "task.h"
+#include "utils/meta.hpp"
 
 namespace obc::scheduling {
 /**
@@ -37,8 +38,17 @@ namespace obc::scheduling {
  * @tparam R The desired return type.
  */
 template<typename T, typename R>
-concept Pollable = requires(T t) {
+concept TypedPollable = requires(T t) {
     { t() } -> std::convertible_to<R>;
+};
+
+/**
+ * @brief A concept defining an object that can be repeatedly called with no
+ * arguments, yielding an option type.
+ */
+template<typename T>
+concept Pollable = requires(T t) {
+    { t() } -> obc::utils::OptionLike;
 };
 
 /**
@@ -93,8 +103,8 @@ class Timeout {
      * @return The result of the callable or std::nullopt if the timeout
      * expired.
      */
-    template<typename R, Pollable<std::optional<R>> F>
-    std::optional<R> Poll(F f) {
+    template<Pollable F>
+    auto Poll(F& f) -> std::optional<std::remove_reference_t<decltype(*f())>> {
         while (!(*this))
             if (auto x = f()) return *x;
         return std::nullopt;
@@ -112,14 +122,12 @@ class Timeout {
      *
      * @return True if the callable succeeded before the timeout.
      */
-    template<Pollable<bool> F>
-    bool Poll(F f) {
-        return Poll<std::monostate>(
-            [&] {
-                if (f()) return std::monostate {};
-                return std::nullopt;
-            }
-        );
+    template<TypedPollable<bool> F>
+    bool Poll(F& f) {
+        return Poll<std::monostate>([&] {
+            if (f()) return std::monostate {};
+            return std::nullopt;
+        });
     }
 
   private:
@@ -178,4 +186,4 @@ class Timeout::Guard {
   private:
     Timeout m_timeout;
 };
-}  // namespace obc
+}  // namespace obc::scheduling

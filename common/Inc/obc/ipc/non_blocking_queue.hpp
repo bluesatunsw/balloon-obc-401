@@ -29,4 +29,4 @@ class NonBlockingQueue {
     void push(T x);
     T    pop();
 };
-}  // namespace obc
+}  // namespace obc::ipc
