@@ -43,4 +43,4 @@ Timeout::Guard::Guard(Timeout timeout) : m_timeout(timeout) {}
 Timeout::Guard::Guard(units::microseconds<float> period) : m_timeout(period) {}
 
 Timeout::Guard::~Guard() { m_timeout.Block(); }
-}  // namespace obc
+}  // namespace obc::scheduling

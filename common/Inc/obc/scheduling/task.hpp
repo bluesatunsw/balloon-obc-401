@@ -28,9 +28,8 @@
 
 #include "FreeRTOS.h"
 #include "cmsis_os.h"
-#include "task.h"
-
 #include "scheduling/delay.hpp"
+#include "task.h"
 
 namespace obc::scheduling {
 /**
@@ -81,8 +80,8 @@ class Task {
      * @warning If the stack is undersized, undefined behavior can occur.
      */
     virtual std::span<StackType_t> Stack() {
-    	// Needed to prevent a linker error.
-    	return {};
+        // Needed to prevent a linker error.
+        return {};
     };
 
     constexpr virtual osPriority Priority() const { return osPriorityNormal; }
@@ -112,7 +111,7 @@ class Task {
         // TODO: Eliminate extra layer of indirection
         auto task {static_cast<Task*>(instance)};
         while (true) {
-        	scheduling::Timeout::Guard timeout {task->NominalPeriod()};
+            scheduling::Timeout::Guard timeout {task->NominalPeriod()};
             task->Run();
         }
 
@@ -136,4 +135,4 @@ class StackTask : public virtual Task {
   private:
     std::array<StackType_t, StackDepth> m_task_stack;
 };
-}  // namespace obc
+}  // namespace obc::scheduling

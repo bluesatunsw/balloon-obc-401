@@ -22,6 +22,7 @@
 
 #include <atomic>
 #include <cassert>
+#include <concepts>
 #include <cstddef>
 #include <optional>
 #include <span>
@@ -86,6 +87,36 @@ struct BasicMessage {
 };
 
 /**
+ * @brief A generic buffer type which behaves like std::span.
+ *
+ * Used for storing the the payload of packets received in operations where the
+ * size of the message may be unbound (from the perspective of the bus).
+ *
+ * @tparam V Fundamental unit of data stored in the buffer.
+ */
+template<typename T, typename V = std::byte>
+concept Buffer = requires(T& buf, V v, std::size_t i) {
+    { buf[i] } -> std::convertible_to<V>;
+    { buf[i] = v };
+    { buf.size() } -> std::convertible_to<std::size_t>;
+} && std::semiregular<V>;
+
+/**
+ * @brief Convert a trivial struct into a byte buffer.
+ *
+ * Can be used to facilitate trivial deserialization of C-style structs sent on
+ * a bus.
+ *
+ * @tparam T type of the struct to translate.
+ */
+template<typename T>
+    requires std::is_trivially_copyable_v<T>
+auto StructAsBuffer(T& s) {
+    return std::span<std::byte, sizeof(T)> {
+        reinterpret_cast<std::byte*>(&s), sizeof(T)};
+}
+
+/**
  * @brief Represents a bus that can send packets of data to an address.
  *
  * Includes a function `Send(msg)` for sending a message on the bus.
@@ -107,7 +138,7 @@ concept SendBus = requires(T& bus, const M& msg) {
  */
 template<typename T, typename M = BasicMessage>
 concept ListenBus =
-    requires(T& bus, ipc::Callback<void, const M&>::DummySource cb) {
+    requires(T& bus, ipc::Callback<void, const M&>::DummyProvider&& cb) {
         typename T::ListenHandle;
 
         { bus.Listen(cb.Func) } -> std::same_as<typename T::ListenHandle>;
@@ -116,7 +147,10 @@ concept ListenBus =
 /**
  * @brief A helper class for implementing listening functionality.
  *
- * `FeedListeners` should be called for each incoming message.
+ * `FeedListeners` should be called for each incoming message. Typically
+ * this should be invoked before feeding requesters and processors to
+ * avoid them invalidating the data buffer which the message is potentially
+ * stored in.
  *
  * @tparam M The type of message received.
  */
@@ -134,8 +168,8 @@ class ListenBusMixin {
      * @return An opaque handle that must be retained for the listener to remain
      * active.
      */
-    ListenHandle Listen(ListenCallback cb) {
-        return ListenHandle(m_listeners, cb);
+    ListenHandle Listen(ListenCallback&& cb) {
+        return ListenHandle(m_listeners, std::move(cb));
     }
 
   protected:
@@ -163,19 +197,25 @@ class ListenBusMixin {
  *
  * @tparam Req The type of message sent to request data.
  * @tparam Res The type of message received in response.
+ * @tparam BufUnit Fundemental type of data stored in the response buffer.
+ * @tparam Buf The type of buffer used by the response.
  */
-template<typename T, typename Req = BasicMessage, typename Res = BasicMessage>
+template<
+    typename T, typename Req = BasicMessage, typename Res = BasicMessage,
+    typename BufUnit = std::byte, typename Buf = std::span<BufUnit>>
 concept RequestBus =
     requires(
-        T& bus, const Req& req, ipc::Callback<void, const Res&>::DummySource cb
+        T& bus, const Req& req,
+        ipc::Callback<void, const Res&>::DummyProvider cb, Buf& buf
     ) {
         typename T::RequestHandle;
 
         {
-            bus.Request(req, cb.Func)
+            bus.Request(req, cb.Func, buf)
         } -> std::same_as<typename T::RequestHandle>;
     } &&
-    std::semiregular<typename T::RequestHandle> && Message<Req> && Message<Res>;
+    std::semiregular<typename T::RequestHandle> && Message<Req> &&
+    Message<Res> && Buffer<Buf, BufUnit>;
 
 /**
  * @brief Represents a callable that returns a bool in response to a packet.
@@ -217,7 +257,9 @@ concept RequestBusMixinRequirements = requires(T& bus, const Req& req) {
  */
 template<
     typename D, Message Req = BasicMessage, Message Res = BasicMessage,
-    MessageFilter<Res> Flt = ipc::Callback<bool, const Res&>>
+    MessageFilter<Res> Flt     = ipc::Callback<bool, const Res&>,
+    std::semiregular   BufUnit = std::byte,
+    Buffer<BufUnit>    Buf     = std::span<BufUnit>>
 class RequestBusMixin {
     using RequestCallback = ipc::Callback<void, const Res&>;
 
@@ -237,12 +279,12 @@ class RequestBusMixin {
      * @return An opaque handle that must be retained until the request is
      * fulfilled or the response is no longer desired.
      */
-    RequestHandle Request(const Req& req, RequestCallback cb) {
+    RequestHandle Request(const Req& req, RequestCallback&& cb, Buf buf) {
         return RequestHandle(
             m_request_handlers,
             {
-                .filter   = Derived().IssueRequest(req),
-                .callback = cb,
+                .filter   = Derived().IssueRequest(req, buf),
+                .callback = std::move(cb),
             }
         );
     }
@@ -280,12 +322,14 @@ class RequestBusMixin {
  * Includes a function `Process(cb)` for registering a callback that returns a
  * response if it can handle a given request.
  *
+ * TODO: Implement supplying request buffers.
+ *
  * @tparam Req The type of message received that requests data.
  * @tparam Res The type of message sent in response.
  */
 template<typename T, typename Req = BasicMessage, typename Res = BasicMessage>
 concept ProcessBus =
-    requires(T& bus, ipc::Callback<std::optional<Res>, Req>::DummySource cb) {
+    requires(T& bus, ipc::Callback<std::optional<Res>, Req>::DummyProvider cb) {
         typename T::ProcessHandle;
 
         { bus.Process(cb.Func) } -> std::same_as<typename T::ProcessHandle>;
@@ -330,8 +374,8 @@ class ProcessBusMixin {
      * @return An opaque handle that must be retained for the processor to
      * remain active.
      */
-    ProcessHandle Process(ProcessCallback cb) {
-        return ProcessHandle(m_processors, cb);
+    ProcessHandle Process(ProcessCallback&& cb) {
+        return ProcessHandle(m_processors, std::move(cb));
     }
 
   protected:

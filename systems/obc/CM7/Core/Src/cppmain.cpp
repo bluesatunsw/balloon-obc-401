@@ -21,10 +21,18 @@
 #include "cppmain.hpp"
 
 #include <cstddef>
+#include <functional>
+#include <optional>
+#include <span>
+
+#include <units/time.h>
 
 #include "bus.hpp"
 #include "ipc/callback.hpp"
 #include "monitoring/watched_task.hpp"
+#include "scheduling/delay.hpp"
+
+using namespace units::literals;
 
 class DummyBus : public virtual obc::scheduling::StackTask<>,
                  public virtual obc::monitoring::WatchedTask,
@@ -54,7 +62,22 @@ struct StaticData {
     // obc::WatchdogTask watchdog {watchlist};
 };
 
+void Foo(obc::ipc::Callback<int, float> cb) {
+
+};
+
+struct Bar {
+    short Do(double x) { return 0; };
+};
+
 alignas(StaticData) std::byte static_buf[sizeof(StaticData)];
 extern "C" {
-void CppMain() { auto& static_data = *(new (static_buf) StaticData); }
+void CppMain() {
+    auto& static_data = *(new (static_buf) StaticData);
+    obc::ipc::AsyncValue<obc::bus::BasicMessage> foo {};
+    static_data.busses.dummy.Listen(foo);
+    Bar bar;
+    Foo(OBC_CALLBACK_METHOD(bar, Do));
+    auto res {obc::scheduling::Timeout(10.0_ms).Poll(foo)};
+}
 }

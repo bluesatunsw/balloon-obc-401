@@ -167,4 +167,4 @@ class WatchdogTask : public scheduling::StackTask<WatchdogStackSize> {
   private:
     Watchlist m_watchlist;
 };
-}  // namespace obc
+}  // namespace obc::monitoring

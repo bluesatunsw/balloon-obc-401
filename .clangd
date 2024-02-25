@@ -1,2 +1,2 @@
 CompileFlags:
-  Add: [-isystem/usr/include/c++/v1]
+  Add: [-std=c++2b, -isystem/usr/include/c++/v1]
