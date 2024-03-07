@@ -117,6 +117,21 @@ auto StructAsBuffer(T& s) {
 }
 
 /**
+ * @brief Convert a trivial struct into a byte buffer.
+ *
+ * Can be used to facilitate trivial deserialization of C-style structs sent on
+ * a bus.
+ *
+ * @tparam T type of the struct to translate.
+ */
+template<typename T>
+    requires std::is_trivially_copyable_v<T>
+auto StructAsBuffer(T&& s) {
+    return std::span<std::byte, sizeof(T)> {
+        reinterpret_cast<std::byte*>(&s), sizeof(T)};
+}
+
+/**
  * @brief Represents a bus that can send packets of data to an address.
  *
  * Includes a function `Send(msg)` for sending a message on the bus.

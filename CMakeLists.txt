@@ -1,11 +1,15 @@
 cmake_minimum_required(VERSION 3.28)
-include(utils/compiler-setup.cmake)
+include(extern/stm32-cmake/cmake/stm32_gcc.cmake)
+set(CMAKE_CXX_STANDARD 23)
 project(balloon)
 
-include(utils/compiler-setup.cmake)
-include(utils/system-project.cmake)
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+set(FREERTOS_PATH "/home/evan/STM32Cube/Repository/Packs/STMicroelectronics/X-CUBE-FREERTOS/1.1.0/Middlewares/Third_Party/")
+set(STM32_CUBE_H7_PATH "/home/evan/STM32Cube/Repository/STM32Cube_FW_H7_V1.11.1/")
+
+include(extern/CMakeLists.txt)
+add_subdirectory(common)
+
 include(utils/checks.cmake)
 
-add_subdirectory(extern)
-add_subdirectory(common)
 add_subdirectory(systems)

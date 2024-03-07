@@ -1,3 +1,6 @@
 [submodule "units"]
 	path = extern/units
 	url = git@github.com:nholthaus/units.git
+[submodule "extern/stm32-cmake"]
+	path = extern/stm32-cmake
+	url = git@github.com:ObKo/stm32-cmake.git

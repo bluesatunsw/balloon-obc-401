@@ -44,10 +44,10 @@ class Task {
     /**
      * @brief Creates and starts a new task.
      */
-    inline Task()
+    inline Task(std::span<StackType_t> stack)
         : m_handle {xTaskCreateStatic(
-              &RTOSTask, Name(), Stack().size(), this, Priority(),
-              Stack().data(), &m_task_data
+              &RTOSTask, Name(), stack.size(), this, Priority(),
+              stack.data(), &m_task_data
           )} {}
 
     Task(const Task& other) = delete;
@@ -74,16 +74,6 @@ class Task {
      */
     constexpr virtual const char* Name() const { return "Unnamed Task"; }
 
-    /**
-     * @brief Gets the memory to be used as the stack for this task.
-     *
-     * @warning If the stack is undersized, undefined behavior can occur.
-     */
-    virtual std::span<StackType_t> Stack() {
-        // Needed to prevent a linker error.
-        return {};
-    };
-
     constexpr virtual osPriority Priority() const { return osPriorityNormal; }
 
     /**
@@ -98,7 +88,7 @@ class Task {
      * `NominalPeriod`.
      */
     constexpr virtual units::microseconds<float> NominalPeriod() const {
-        return units::microseconds<float>(0);
+        return units::microseconds<float>(1000);
     }
 
   private:
@@ -128,11 +118,8 @@ constexpr std::uint32_t DefaultStackDepth = 4096;
  * @brief Mixin class to statically create a fixed-size stack for a task.
  */
 template<std::uint32_t StackDepth = DefaultStackDepth>
-class StackTask : public virtual Task {
+class StackTask {
   protected:
-    std::span<StackType_t> Stack() override final { return m_task_stack; }
-
-  private:
-    std::array<StackType_t, StackDepth> m_task_stack;
+    std::array<StackType_t, StackDepth> m_task_stack{};
 };
 }  // namespace obc::scheduling

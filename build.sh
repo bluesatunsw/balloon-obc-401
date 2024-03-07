@@ -1,4 +1,3 @@
 #!/bin/bash
-export BUILD_PASS="arm"
-cmake .
-cmake --build .
+cmake -B ./build -S ./
+cmake --build ./build

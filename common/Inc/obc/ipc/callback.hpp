@@ -20,6 +20,8 @@
 
 #pragma once
 
+#include <units/time.h>
+
 #include <atomic>
 #include <concepts>
 #include <cstdint>
@@ -30,6 +32,7 @@
 #include <variant>
 
 #include "ipc/mutex.hpp"
+#include "scheduling/delay.hpp"
 
 namespace obc::ipc {
 /**
@@ -283,4 +286,11 @@ class Callback {
 
 template<typename T, typename R, typename... As>
 concept CallbackSource = std::convertible_to<T, Callback<R, As...>>;
+
+template<typename T, typename F, typename... As>
+std::optional<T> Await(F f, units::milliseconds<float> timeout, As... args) {
+    AsyncValue<T> res {};
+    f(res, args...);
+    return obc::scheduling::Timeout(timeout).Poll(res);
+}
 }  // namespace obc::ipc

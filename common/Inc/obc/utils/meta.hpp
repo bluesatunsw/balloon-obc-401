@@ -30,4 +30,7 @@ concept AllPairsConvertable =
     TupleLike<F> && TupleLike<T> &&
     (std::tuple_size_v<F> == std::tuple_size_v<T>)&&MultiwayConjunction<
         std::tuple_size_v<F>, std::is_convertible, F, T>::value;
+
+template<typename R, typename E>
+using AddPossibleError = R;
 }  // namespace obc::utils
