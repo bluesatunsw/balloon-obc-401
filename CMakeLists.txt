@@ -1,5 +1,6 @@
 cmake_minimum_required(VERSION 3.28)
 
+set(CMAKE_SYSTEM_NAME "Generic")
 set(CMAKE_C_COMPILER_FORCED ON)
 set(CMAKE_CXX_COMPILER_FORCED ON)
 
