@@ -7,7 +7,8 @@ A flexible on-board-computer for high altitude balloons based on the dual core S
 3. Open `/systems/obc/obc.ioc`. If prompted to migrate, press "continue".
 4. On first open, let the relevant packages download.
 5. Have the STMicroelectronics.X-CUBE-FREERTOS package installed (Software Packs -> Select Components).
-6. Profit
+6. By default, the STM32 repository directory is ${HOME} or ${USERPROFILE} /STM32Cube/Repository/, if you change this, set STM32_RP_DIR in your environment variables to reflect the new location so the buildsystem can find it.
+7. Profit
 
 ## Multithreading
 Given the low level nature of embedded development, we do not have the luxury of symmetric multiprocessing.
