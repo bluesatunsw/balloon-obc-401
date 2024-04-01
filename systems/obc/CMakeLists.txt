@@ -54,6 +54,7 @@ target_link_libraries(obc_m7 PRIVATE
     CMSIS::STM32::H755ZI::M7
     CMSIS::STM32::H7::M7::RTOS_V2
     STM32::NoSys
+    units
 )
 target_link_directories(obc_m7 INTERFACE
     FreeRTOS::ARM_CM7
@@ -76,6 +77,7 @@ target_link_libraries(obc_m4 PRIVATE
     CMSIS::STM32::H755ZI::M4
     CMSIS::STM32::H7::M4::RTOS_V2
     STM32::NoSys
+    units
 )
 target_link_directories(obc_m4 INTERFACE
     FreeRTOS::ARM_CM4F

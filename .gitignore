@@ -48,11 +48,11 @@
 **/Drivers/**
 
 # CMake Files
-**/CMakeFiles/**
-Makefile
-CMakeCache.txt
-cmake_install.cmake
+/build
 
 # Clangd
 compile_commands.json
 .cache
+
+# VSCode
+/.vscode
