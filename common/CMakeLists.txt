@@ -1,18 +1,9 @@
 project(common)
 
-set(COMMON_COMMON_SOURCES
+add_library(common INTERFACE
     ${PROJECT_SOURCE_DIR}/Src/ipc/mutex.cpp
-    ${PROJECT_SOURCE_DIR}/Src/scheduling/delay.cpp   
+    ${PROJECT_SOURCE_DIR}/Src/scheduling/delay.cpp
 )
-set(COMMON_COMMON_INCLUDES
+target_include_directories(common INTERFACE
     ${PROJECT_SOURCE_DIR}/Inc/obc
-)
-
-set(COMMON_INCLUDES
-    ${COMMON_COMMON_INCLUDES} ${COMMON_EXTERN_INCLUDES}
-    PARENT_SCOPE
-)
-set(COMMON_SOURCES
-    ${COMMON_COMMON_SOURCES} ${COMMON_EXTERN_SOURCES}
-    PARENT_SCOPE
 )
