@@ -1,8 +1,11 @@
 cmake_minimum_required(VERSION 3.27)
 
-set(CMAKE_SYSTEM_NAME "Generic")
-set(CMAKE_C_COMPILER_FORCED ON)
-set(CMAKE_CXX_COMPILER_FORCED ON)
+if (CMAKE_C_COMPILER MATCHES "arm-none-eabi" OR CMAKE_CXX_COMPILER MATCHES "arm-none-eabi")
+    set(CMAKE_SYSTEM_NAME "Generic")
+    set(BALLOON_CROSS_COMPILING ON)
+else()
+    set(BALLOON_CROSS_COMPILING OFF)
+endif()
 
 project(balloon)
 
@@ -23,5 +26,11 @@ include(extern/stm32-cmake/cmake/stm32/common.cmake)
 include(utils/checks.cmake)
 
 add_subdirectory(extern/units)
+
+set(INSTALL_GTEST OFF CACHE INTERNAL "" FORCE)
+add_subdirectory(extern/googletest)
+
 add_subdirectory(common)
-add_subdirectory(systems)
+if (BALLOON_CROSS_COMPILING)
+    add_subdirectory(systems)
+endif()
