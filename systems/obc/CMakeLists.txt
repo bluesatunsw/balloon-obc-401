@@ -10,10 +10,6 @@ find_package(HAL COMPONENTS
 )
 find_package(FreeRTOS COMPONENTS ARM_CM7 ARM_CM4F REQUIRED)
 
-set(OBC_COMMON_SOURCES
-    ${COMMON_SOURCES}
-)
-
 set(M7_SOURCES
     CM7/Core/Src/freertos.c
     CM7/Core/Src/main.c
@@ -28,8 +24,8 @@ set(M4_SOURCES
     CM4/Core/Src/stm32h7xx_it.c
 )
 
-add_executable(obc_m7 ${OBC_COMMON_SOURCES} ${M7_SOURCES})
-add_executable(obc_m4 ${OBC_COMMON_SOURCES} ${M4_SOURCES})
+add_executable(obc_m7 ${M7_SOURCES})
+add_executable(obc_m4 ${M4_SOURCES})
 target_include_directories(obc_m7 PRIVATE ${COMMON_INCLUDES} CM7/Core/Inc/)
 target_include_directories(obc_m4 PRIVATE ${COMMON_INCLUDES} CM4/Core/Inc/)
 
