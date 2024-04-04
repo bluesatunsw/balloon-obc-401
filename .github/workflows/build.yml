@@ -2,23 +2,31 @@ name: build
 on: [push]
 jobs:
   build:
-    runs-on: windows-latest
+    strategy:
+      matrix:
+        platform: [{ os: windows-latest, shell: "msys2 {0}" }, { os: ubuntu-latest, shell: bash }]
+    runs-on: ${{ matrix.platform.os }}
     defaults:
       run:
-        shell: msys2 {0}
+        shell: ${{ matrix.platform.shell }}
     steps:
     - uses: actions/checkout@v4
       with:
         submodules: recursive
     - uses: msys2/setup-msys2@v2
+      if: ${{ matrix.platform.os }} == windows-latest
       with:
         path-type: inherit
         msystem: mingw64
         install: mingw-w64-x86_64-arm-none-eabi-toolchain
+    - name: Linux Dependencies (arm-cross)
+      if: ${{ matrix.platform.os }} == ubuntu-latest
+      run: |
+        sudo apt install -y gdb-arm-none-eabi
     - uses: jwlawson/actions-setup-cmake@v1.14
     - name: Configure
       run: |
-        cmake -DCMAKE_C_COMPILER="arm-none-eabi-gcc" -DCMAKE_CXX_COMPILER="arm-none-eabi-g++" -G"MSYS Makefiles" -Bbuild .
+        cmake -DCMAKE_C_COMPILER="arm-none-eabi-gcc" -DCMAKE_CXX_COMPILER="arm-none-eabi-g++" -Bbuild .
     - name: Build
       run: |
         cmake --build ./build --config Debug --target all
