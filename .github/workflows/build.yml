@@ -4,7 +4,7 @@ jobs:
   build:
     strategy:
       matrix:
-        platform: [{ os: windows-latest, shell: 'msys2 {0}', gen: 'MSYS Makefiles' }, { os: ubuntu-latest, shell: bash, gen: 'Ninja' }]
+        platform: [{ os: windows-latest, shell: 'msys2 {0}', gen: 'MSYS Makefiles', cpref: 'arm-none-eabi-' }, { os: ubuntu-latest, shell: bash, gen: 'Ninja', cpref: 'arm-none-eabi-' }]
         cross: [true, false]
     runs-on: ${{ matrix.platform.os }}
     defaults:
@@ -44,7 +44,7 @@ jobs:
     - uses: jwlawson/actions-setup-cmake@v1.14
     - name: Configure
       run: |
-        cmake -DCMAKE_C_COMPILER="arm-none-eabi-gcc" -DCMAKE_CXX_COMPILER="arm-none-eabi-g++" -G"${{ matrix.platform.gen }}" -Bbuild .
+        cmake -DCMAKE_C_COMPILER="${{ matrix.platform.cpref }}gcc" -DCMAKE_CXX_COMPILER="${{ matrix.platform.cpref }}g++" -G"${{ matrix.platform.gen }}" -Bbuild .
     - name: Build
       run: |
         cmake --build ./build --config Debug --target all
