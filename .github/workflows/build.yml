@@ -4,7 +4,7 @@ jobs:
   build:
     strategy:
       matrix:
-        platform: [{ os: windows-latest, shell: 'msys2 {0}' }, { os: ubuntu-latest, shell: bash }]
+        platform: [{ os: windows-latest, shell: 'msys2 {0}', gen: 'MSYS Makefiles' }, { os: ubuntu-latest, shell: bash, gen: 'Ninja' }]
     runs-on: ${{ matrix.platform.os }}
     defaults:
       run:
@@ -22,11 +22,13 @@ jobs:
     - name: Linux Dependencies (arm-cross)
       if: matrix.platform.os == 'ubuntu-latest'
       run: |
+        sudo apt-get upgrade
         sudo apt install -y gcc-arm-none-eabi
+        sudo apt-get install -y ninja-build
     - uses: jwlawson/actions-setup-cmake@v1.14
     - name: Configure
       run: |
-        cmake -DCMAKE_C_COMPILER="arm-none-eabi-gcc" -DCMAKE_CXX_COMPILER="arm-none-eabi-g++" -Bbuild .
+        cmake -DCMAKE_C_COMPILER="arm-none-eabi-gcc" -DCMAKE_CXX_COMPILER="arm-none-eabi-g++" -G"${{ matrix.platform.gen }}" -Bbuild .
     - name: Build
       run: |
         cmake --build ./build --config Debug --target all
