@@ -4,7 +4,7 @@ jobs:
   build:
     strategy:
       matrix:
-        platform: [{ os: windows-latest, shell: "msys2 {0}" }, { os: ubuntu-latest, shell: bash }]
+        platform: [{ os: windows-latest, shell: 'msys2 {0}' }, { os: ubuntu-latest, shell: bash }]
     runs-on: ${{ matrix.platform.os }}
     defaults:
       run:
@@ -14,15 +14,15 @@ jobs:
       with:
         submodules: recursive
     - uses: msys2/setup-msys2@v2
-      if: ${{ matrix.platform.os }} == windows-latest
+      if: matrix.platform.os == 'windows-latest'
       with:
         path-type: inherit
         msystem: mingw64
         install: mingw-w64-x86_64-arm-none-eabi-toolchain
     - name: Linux Dependencies (arm-cross)
-      if: ${{ matrix.platform.os }} == ubuntu-latest
+      if: matrix.platform.os == 'ubuntu-latest'
       run: |
-        sudo apt install -y gdb-arm-none-eabi
+        sudo apt install -y gcc-arm-none-eabi
     - uses: jwlawson/actions-setup-cmake@v1.14
     - name: Configure
       run: |
