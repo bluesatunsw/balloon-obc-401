@@ -48,3 +48,7 @@ jobs:
     - name: Build
       run: |
         cmake --build ./build --config Debug --target all
+    - name: Test
+      if: ${{ matrix.toolchain.cross }}
+      run: |
+        ctest --test-dir ./build
