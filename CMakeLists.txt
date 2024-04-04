@@ -31,15 +31,15 @@ include(utils/checks.cmake)
 
 add_subdirectory(extern/units)
 
-set(INSTALL_GTEST OFF CACHE INTERNAL "" FORCE)
-add_subdirectory(extern/googletest)
-
 add_subdirectory(common)
 if (BALLOON_CROSS_COMPILING)
     add_subdirectory(systems)
 endif()
 
 if (NOT BALLOON_CROSS_COMPILING)
+    set(INSTALL_GTEST OFF CACHE INTERNAL "" FORCE)
+    add_subdirectory(extern/googletest)
+
     enable_testing()
     add_subdirectory(tests)
 endif()
