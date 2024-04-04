@@ -16,26 +16,26 @@ jobs:
         submodules: recursive
     - name: Windows Toolchain (arm-cross)
       uses: msys2/setup-msys2@v2
-      if: matrix.platform.os == 'windows-latest' && ${{ matrix.cross }}
+      if: ${{ matrix.platform.os == 'windows-latest' && matrix.cross }}
       with:
         path-type: inherit
         msystem: mingw64
         install: mingw-w64-x86_64-arm-none-eabi-toolchain
     - name: Windows Toolchain (host=target)
       uses: msys2/setup-msys2@v2
-      if: matrix.platform.os == 'windows-latest' && ${{ !matrix.cross }}
+      if: ${{ matrix.platform.os == 'windows-latest' && !matrix.cross }}
       with:
         path-type: inherit
         msystem: mingw64
         install: mingw-w64-x86_64-toolchain
     - name: Linux Toolchain (arm-cross)
-      if: matrix.platform.os == 'ubuntu-latest' && ${{ matrix.cross }}
+      if: ${{ matrix.platform.os == 'ubuntu-latest' && matrix.cross }}
       run: |
         sudo apt-get upgrade
         sudo apt install -y gcc-arm-none-eabi
         sudo apt-get install -y ninja-build
     - name: Linux Toolchain (host=target)
-      if: matrix.platform.os == 'ubuntu-latest' && ${{ !matrix.cross }}
+      if: ${{ matrix.platform.os == 'ubuntu-latest' && !matrix.cross }}
       run: |
         sudo apt-get upgrade
         sudo apt install -y gcc-13
