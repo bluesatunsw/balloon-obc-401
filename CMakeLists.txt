@@ -2,6 +2,8 @@ cmake_minimum_required(VERSION 3.27)
 
 if (CMAKE_C_COMPILER MATCHES "arm-none-eabi" OR CMAKE_CXX_COMPILER MATCHES "arm-none-eabi")
     set(CMAKE_SYSTEM_NAME "Generic")
+    set(CMAKE_C_COMPILER_FORCED ON)
+    set(CMAKE_CXX_COMPILER_FORCED ON)
     set(BALLOON_CROSS_COMPILING ON)
 else()
     set(BALLOON_CROSS_COMPILING OFF)
