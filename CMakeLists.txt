@@ -1,8 +1,13 @@
 cmake_minimum_required(VERSION 3.27)
 
-set(CMAKE_SYSTEM_NAME "Generic")
-set(CMAKE_C_COMPILER_FORCED ON)
-set(CMAKE_CXX_COMPILER_FORCED ON)
+if (CMAKE_C_COMPILER MATCHES "arm-none-eabi" OR CMAKE_CXX_COMPILER MATCHES "arm-none-eabi")
+    set(CMAKE_SYSTEM_NAME "Generic")
+    set(CMAKE_C_COMPILER_FORCED ON)
+    set(CMAKE_CXX_COMPILER_FORCED ON)
+    set(BALLOON_CROSS_COMPILING ON)
+else()
+    set(BALLOON_CROSS_COMPILING OFF)
+endif()
 
 project(balloon)
 
@@ -18,10 +23,23 @@ list(APPEND CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/extern/stm32-cmake/cmake")
 set(STM32_CUBE_H7_PATH "${CMAKE_SOURCE_DIR}/extern/STM32CubeH7")    
 set(FREERTOS_PATH "${CMAKE_SOURCE_DIR}/extern/x-cube-freertos/Middlewares/Third_Party")
 
-include(extern/stm32-cmake/cmake/stm32_gcc.cmake)
-include(extern/stm32-cmake/cmake/stm32/common.cmake)
+if (BALLOON_CROSS_COMPILING)
+    include(extern/stm32-cmake/cmake/stm32_gcc.cmake)
+    include(extern/stm32-cmake/cmake/stm32/common.cmake)
+endif()
 include(utils/checks.cmake)
 
 add_subdirectory(extern/units)
+
 add_subdirectory(common)
-add_subdirectory(systems)
+if (BALLOON_CROSS_COMPILING)
+    add_subdirectory(systems)
+endif()
+
+if (NOT BALLOON_CROSS_COMPILING)
+    set(INSTALL_GTEST OFF CACHE INTERNAL "" FORCE)
+    add_subdirectory(extern/googletest)
+
+    enable_testing()
+    add_subdirectory(tests)
+endif()
