@@ -7,3 +7,9 @@
 [submodule "extern/googletest"]
 	path = extern/googletest
 	url = https://github.com/google/googletest.git
+[submodule "STM32CubeH7"]
+	path = extern/STM32CubeH7
+	url = https://github.com/STMicroelectronics/STM32CubeH7.git
+[submodule "extern/x-cube-freertos"]
+	path = extern/x-cube-freertos
+	url = https://github.com/STMicroelectronics/x-cube-freertos.git

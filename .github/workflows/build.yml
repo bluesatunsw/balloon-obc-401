@@ -16,7 +16,7 @@ jobs:
     - uses: jwlawson/actions-setup-cmake@v1.14
     - name: Configure
       run: |
-        cmake -DCMAKE_C_COMPILER=arm-none-eabi-gcc -DCMAKE_CXX_COMPILER=arm-none-eabi-g++ -Bbuild .
+        cmake -DCMAKE_C_COMPILER="arm-none-eabi-gcc" -DCMAKE_CXX_COMPILER="arm-none-eabi-g++" -Bbuild .
     - name: Build
       run: |
         cmake --build build --config Debug --target all
