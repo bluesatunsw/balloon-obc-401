@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.28)
+cmake_minimum_required(VERSION 3.27)
 
 set(CMAKE_SYSTEM_NAME "Generic")
 set(CMAKE_C_COMPILER_FORCED ON)
