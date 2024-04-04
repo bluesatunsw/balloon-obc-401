@@ -3,12 +3,10 @@ A flexible on-board-computer for high altitude balloons based on the dual core S
 
 ## Setup / Build Instructions
 1. Windows -> ARM cross toolchain available [here](https://developer.arm.com/downloads/-/arm-gnu-toolchain-downloads).
-2. Install STM32CubeMX (create an account).
-3. Open `/systems/obc/obc.ioc`. If prompted to migrate, press "continue".
-4. On first open, let the relevant packages download.
-5. Have the STMicroelectronics.X-CUBE-FREERTOS package installed (Software Packs -> Select Components).
-6. By default, the STM32 repository directory is ${HOME} or ${USERPROFILE} /STM32Cube/Repository/, if you change this, set STM32_RP_DIR in your environment variables to reflect the new location so the buildsystem can find it.
-7. Profit
+2. Run `git submodule update --init --remote --recursive`
+3. `cmake -DCMAKE_C_COMPILER=... -DCMAKE_CXX_COMPILER=... -Bbuild .`
+4. `cmake --build build --config Debug --target all`
+5. Profit
 
 ## Multithreading
 Given the low level nature of embedded development, we do not have the luxury of symmetric multiprocessing.
