@@ -1,7 +1,7 @@
 /* USER CODE BEGIN Header */
 /*
  * 401 Ballon OBC
- * Copyright (C) 2023 Bluesat and contributors
+ * Copyright (C) 2024 Bluesat and contributors.
  *
  * This program is free software: you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the Free
