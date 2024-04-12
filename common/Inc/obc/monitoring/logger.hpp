@@ -21,11 +21,54 @@
 #pragma once
 
 namespace obc::monitoring {
-class LoggerStream {};
+    class LoggerStream {
+        private:
+        static LoggerStream instance;
+        Log buffer[256];
+        
+            // TODO
 
-class Logger {
-    LoggerStream operator*() {
-        // TODO
-    }
-};
-}  // namespace obc::monitoring
+        public:
+        LoggerStream& operator<<(const char* message) {
+            // TODO
+            return *this;
+        }
+    };
+
+    class Log {
+        private:
+        char message[256];
+        int err;
+
+        public:
+        Log(const char* message, int err) : err(err) {
+            // TODO
+        }
+    };
+
+    class Logger {
+
+        private:
+        int subsys;
+        LoggerStream stream;
+
+        public:
+        Logger(int subsys) : subsys(subsys) {
+            // TODO
+        }
+
+        LoggerStream operator*() {
+            // TODO Probably call steam.operator*()
+        }
+
+        /* 
+        Log a message to the data logger
+        @param message: The message to log
+        @param err: The error code (See Confluence)
+        @param subsys: The subsystem that the error occurred in
+        */
+        static void log(Log log) {
+            // TODO
+        }
+    };
+}  
