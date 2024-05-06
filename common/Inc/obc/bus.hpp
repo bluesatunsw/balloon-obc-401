@@ -113,7 +113,8 @@ template<typename T>
     requires std::is_trivially_copyable_v<T>
 auto StructAsBuffer(T& s) {
     return std::span<std::byte, sizeof(T)> {
-        reinterpret_cast<std::byte*>(&s), sizeof(T)};
+        reinterpret_cast<std::byte*>(&s), sizeof(T)
+    };
 }
 
 /**
@@ -128,7 +129,8 @@ template<typename T>
     requires std::is_trivially_copyable_v<T>
 auto StructAsBuffer(T&& s) {
     return std::span<std::byte, sizeof(T)> {
-        reinterpret_cast<std::byte*>(&s), sizeof(T)};
+        reinterpret_cast<std::byte*>(&s), sizeof(T)
+    };
 }
 
 /**

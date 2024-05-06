@@ -31,6 +31,6 @@ concept AllPairsConvertable =
     (std::tuple_size_v<F> == std::tuple_size_v<T>)&&MultiwayConjunction<
         std::tuple_size_v<F>, std::is_convertible, F, T>::value;
 
-template<typename R, typename E>
-using AddPossibleError = R;
+template<typename... Ts>
+class TypeAmalgam : public Ts... {};
 }  // namespace obc::utils
