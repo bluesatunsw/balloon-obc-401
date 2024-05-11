@@ -53,9 +53,6 @@ constexpr bool MultiwayConjunctionV =
     ((std::tuple_size_v<T> == std::tuple_size_v<Ts>)&&...) &&
     MultiwayConjunction<std::tuple_size_v<T>, F, Ts...>::value;
 
-template<template<typename...> typename F, typename... Ts>
-constexpr bool MultiwayConjunctionV = false;
-
 /**
  * @brief Check if all element types in a tuple can be converted to their
  * corresponding element types in another.

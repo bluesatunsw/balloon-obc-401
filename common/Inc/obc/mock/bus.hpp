@@ -20,9 +20,9 @@
 
 #pragma once
 
-#include <bus.hpp>
-
 #include <gmock/gmock.h>
+
+#include "obc/bus.hpp"
 
 /**
  * @brief Mocks for communication busses.
@@ -93,7 +93,8 @@ class MockRequestBus : public RequestBusMixin<
  * @tparam Res The type of message sent in response.
  */
 template<Message Req = BasicMessage, Message Res = BasicMessage>
-class MockProcessBus : public ProcessBusMixin<D, Req, Res> {
+class MockProcessBus
+    : public ProcessBusMixin<MockProcessBus<Req, Res>, Req, Res> {
   public:
     /**
      * @brief Forwards a message to processors.
@@ -103,5 +104,5 @@ class MockProcessBus : public ProcessBusMixin<D, Req, Res> {
     void PushProcessResponse(const Res& res) { FeedProcessors(res); }
 
     MOCK_METHOD(void, IssueResponse, (const Req& req, const Res& res));
-}
+};
 }  // namespace obc::bus::mock

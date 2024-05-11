@@ -29,6 +29,8 @@
 #include <stdexcept>
 #include <vector>
 
+#include "obc/port.hpp"
+
 /**
  * @brief Mocks for IO ports.
  *

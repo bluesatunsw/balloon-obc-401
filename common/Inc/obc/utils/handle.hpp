@@ -26,7 +26,7 @@
 #include <mutex>
 #include <optional>
 
-#include "ipc/mutex.hpp"
+#include "obc/ipc/mutex.hpp"
 
 namespace obc::utils {
 template<typename T, typename L = ipc::SpinLock>

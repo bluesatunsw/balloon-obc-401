@@ -20,12 +20,16 @@
 
 #pragma once
 
-namespace obc::monitoring {
-class LoggerStream {};
+#include <mutex>
 
-class Logger {
-    LoggerStream operator*() {
-        // TODO
-    }
-};
-}  // namespace obc::monitoring
+namespace obc::ipc {
+/**
+ * @brief Use the standard library mutex if available.
+ */
+using Mutex = std::mutex;
+
+/**
+ * @brief Use the standard library mutex if available.
+ */
+using SpinLock = std::mutex;
+}  // namespace obc::ipc

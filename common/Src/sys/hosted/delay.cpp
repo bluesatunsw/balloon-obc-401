@@ -22,12 +22,18 @@
 
 #include <units/frequency.h>
 
-namespace obc::scheduling {
-Timeout::Timeout(units::microseconds<float> period) : detail::Timeout(period) {}
+namespace obc::scheduling::detail {
+Timeout::Timeout(units::microseconds<float> period) {
+    // TODO
+}
 
-Timeout::Guard::Guard(Timeout timeout) : m_timeout(timeout) {}
+Timeout::operator bool() { return false; }
 
-Timeout::Guard::Guard(units::microseconds<float> period) : m_timeout(period) {}
+void Timeout::Block() {
+    // TODO
+}
 
-Timeout::Guard::~Guard() { m_timeout.Block(); }
-}  // namespace obc::scheduling
+void Timeout::Yield() {
+    // TODO
+}
+}  // namespace obc::scheduling::detail

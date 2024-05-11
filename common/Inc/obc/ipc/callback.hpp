@@ -31,8 +31,8 @@
 
 #include <units/time.h>
 
-#include "ipc/mutex.hpp"
-#include "scheduling/delay.hpp"
+#include "obc/ipc/mutex.hpp"
+#include "obc/scheduling/delay.hpp"
 
 namespace obc::ipc {
 /**
