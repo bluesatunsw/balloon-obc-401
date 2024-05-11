@@ -124,7 +124,8 @@ constexpr std::uint32_t WatchdogStackSize = 512;
  * This task checks for faults in watched tasks and performs specified
  * interventions upon detection.
  */
-class WatchdogTask : protected scheduling::StackTask<WatchdogStackSize>, public scheduling::Task {
+class WatchdogTask : protected scheduling::StackTask<WatchdogStackSize>,
+                     public scheduling::Task {
   public:
     using Watchlist = std::span<std::reference_wrapper<WatchedTask>>;
 
@@ -133,7 +134,8 @@ class WatchdogTask : protected scheduling::StackTask<WatchdogStackSize>, public 
      *
      * @param watchlist The list of tasks to be monitored.
      */
-    WatchdogTask(Watchlist watchlist) : scheduling::Task(m_task_stack), m_watchlist {watchlist} {}
+    WatchdogTask(Watchlist watchlist)
+        : scheduling::Task(m_task_stack), m_watchlist {watchlist} {}
 
   protected:
     /**

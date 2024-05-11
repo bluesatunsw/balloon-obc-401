@@ -46,8 +46,8 @@ class Task {
      */
     inline Task(std::span<StackType_t> stack)
         : m_handle {xTaskCreateStatic(
-              &RTOSTask, Name(), stack.size(), this, Priority(),
-              stack.data(), &m_task_data
+              &RTOSTask, Name(), stack.size(), this, Priority(), stack.data(),
+              &m_task_data
           )} {}
 
     Task(const Task& other) = delete;
@@ -120,6 +120,6 @@ constexpr std::uint32_t DefaultStackDepth = 4096;
 template<std::uint32_t StackDepth = DefaultStackDepth>
 class StackTask {
   protected:
-    std::array<StackType_t, StackDepth> m_task_stack{};
+    std::array<StackType_t, StackDepth> m_task_stack {};
 };
 }  // namespace obc::scheduling

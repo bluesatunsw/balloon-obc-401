@@ -22,10 +22,41 @@
 
 #include <iterator>
 
+/**
+ * @brief Defines a common interface for IO ports.
+ *
+ * A port is an abstract source or sink of discrete units of data. For example
+ * a digital pin would be a port for booleans and a serial port would be a port
+ * for chars.
+ *
+ * Ports are similar to input/output iterators with the type primarily being
+ * used to signal intent, however there may be additional constraints placed on
+ * them in future.
+ *
+ * @warning Data is only pulled/pushed to the port upon calling the increment
+ * operator, this operation may block for an unspecified duration.
+ *
+ * @warning Polling of a port must be externally rate limited.
+ *
+ * @warning Given the nature of the advance operation, it is generally unsafe
+ * for a port to be directly shared.
+ */
 namespace obc::port {
+/**
+ * @brief A port which acts as a source of data.
+ *
+ * @tparam D Type of data which is pulled from this port.
+ */
 template<typename T, typename D>
-concept InputPort = std::input_iterator<T> && std::convertible_to<typename std::iterator_traits<T>::value_type, D>;
+concept InputPort =
+    std::semiregular<D> && std::input_iterator<T> &&
+    std::convertible_to<typename std::iterator_traits<T>::value_type, D>;
 
+/**
+ * @brief A port which acts as a sink of data.
+ *
+ * @tparam D Type of data which is pushed into this port.
+ */
 template<typename T, typename D>
-concept OutputPort = std::output_iterator<T, D>;
-} // namespace obc::port
+concept OutputPort = std::semiregular<D> && std::output_iterator<T, D>;
+}  // namespace obc::port
