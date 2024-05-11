@@ -44,9 +44,6 @@ class Handle;
 template<typename T, typename L = ipc::SpinLock>
 class HandleChainRoot {
   public:
-    class Iter;
-    friend class Iter;
-
     /**
      * @brief Initializes a handle chain with no elements.
      */
@@ -138,10 +135,15 @@ class HandleChainRoot {
          * @param root Reference to the chain root.
          */
         Iter(HandleChainRoot& root)
-            : m_lock(m_curr->m_next.lock), m_curr(root.m_next.ptr) {
-            // After the pointer to the first real node has safely been
-            // acquired, lock the pointer to the next node.
-            m_lock.swap(m_curr->m_next.lock);
+            : m_lock(root.m_next.lock), m_curr(root.m_next.ptr) {
+            if (m_curr) {
+                // After the pointer to the first real node has safely been
+                // acquired, lock the pointer to the next node.
+                std::unique_lock<L> next_lock(m_curr->m_next.lock);
+                m_lock.swap(next_lock);
+            } else {
+                m_lock.unlock();
+            }
         }
     };
 
@@ -198,6 +200,7 @@ class HandleChainRoot {
  */
 template<typename T, typename L>
 class Handle : private HandleChainRoot<T, L> {
+    friend HandleChainRoot<T, L>::Iter;
     /*
      * Inherits from roots as the root is *just* a node with no payload or
      * previous element. This allows the pointer to the previous node to be
