@@ -28,7 +28,7 @@
 
 #include "FreeRTOS.h"
 #include "cmsis_os.h"
-#include "scheduling/delay.hpp"
+#include "obc/scheduling/delay.hpp"
 #include "task.h"
 
 namespace obc::scheduling {

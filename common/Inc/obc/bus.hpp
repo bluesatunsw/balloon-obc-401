@@ -27,8 +27,8 @@
 #include <optional>
 #include <span>
 
-#include "ipc/callback.hpp"
-#include "utils/handle.hpp"
+#include "obc/ipc/callback.hpp"
+#include "obc/utils/handle.hpp"
 
 /**
  * @brief Defines a common interface for communication buses.

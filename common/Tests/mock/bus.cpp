@@ -18,15 +18,8 @@
  */
 /* USER CODE END Header */
 
-#pragma once
+#include <obc/mock/bus.hpp>
 
-#include <array>
+#include <gtest/gtest.h>
 
-namespace obc::ipc {
-template<typename T, size_t S>
-class NonBlockingQueue {
-  public:
-    void push(T x);
-    T    pop();
-};
-}  // namespace obc::ipc
+TEST(MockBus, Listen) { ASSERT_EQ(1 + 1, 2); }

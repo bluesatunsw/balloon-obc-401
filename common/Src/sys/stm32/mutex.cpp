@@ -18,7 +18,7 @@
  */
 /* USER CODE END Header */
 
-#include "ipc/mutex.hpp"
+#include "obc/ipc/mutex.hpp"
 
 namespace obc::ipc {
 Mutex::Mutex() : m_handle {xSemaphoreCreateMutexStatic(&m_data)} {}
