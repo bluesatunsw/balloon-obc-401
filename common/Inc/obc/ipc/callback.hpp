@@ -73,8 +73,6 @@ class AsyncValue {
                       : std::optional<std::reference_wrapper<T>>(std::nullopt);
     }
 
-    void Foo();
-
   private:
     std::optional<T> m_data {};
     L                m_lock {};

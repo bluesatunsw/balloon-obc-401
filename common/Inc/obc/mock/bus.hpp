@@ -54,7 +54,7 @@ class MockListenBus : public ListenBusMixin<M> {
      *
      * @param msg The message to be forwarded.
      */
-    void PushListenMessage(const M& msg) { FeedListeners(msg); }
+    void PushListenMessage(const M& msg) { this->FeedListeners(msg); }
 };
 
 /**
@@ -81,7 +81,7 @@ class MockRequestBus : public RequestBusMixin<
      *
      * @param res The response message to forward.
      */
-    void PushRequestResponse(const Res& res) { FeedRequesters(res); }
+    void PushRequestResponse(const Res& res) { this->FeedRequesters(res); }
 
     MOCK_METHOD(Flt, IssueRequest, (const Req& req));
 };
@@ -101,7 +101,7 @@ class MockProcessBus
      *
      * @param req The request message to forward.
      */
-    void PushProcessResponse(const Res& res) { FeedProcessors(res); }
+    void PushProcessResponse(const Res& res) { this->FeedProcessors(res); }
 
     MOCK_METHOD(void, IssueResponse, (const Req& req, const Res& res));
 };

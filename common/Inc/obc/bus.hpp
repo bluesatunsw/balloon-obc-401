@@ -26,6 +26,7 @@
 #include <cstddef>
 #include <optional>
 #include <span>
+#include <ranges>
 
 #include "obc/ipc/callback.hpp"
 #include "obc/utils/handle.hpp"
@@ -81,6 +82,14 @@ concept Message = requires(T& msg) {
 struct BasicMessage {
     using Address = std::uint32_t;
     using Data    = std::span<std::byte>;
+
+    inline bool operator==(BasicMessage& other) const {
+        if (this->data.size() != other.data.size()) return false;
+        for (auto [l, r] : std::views::zip(this->data, other.data)) {
+            if (l != r) return false;
+        }
+        return this->address == other.address;
+    }
 
     Address address;
     Data    data;
@@ -198,7 +207,7 @@ class ListenBusMixin {
      * @param msg The message to be forwarded.
      */
     void FeedListeners(const M& msg) {
-        for (const auto& callback : m_listeners) callback(msg);
+        for (auto& callback : m_listeners) callback(msg);
     }
 
   private:
@@ -407,7 +416,7 @@ class ProcessBusMixin {
      * @param req The request message to forward.
      */
     void FeedProcessors(const Req& req) {
-        for (const auto& processor : m_processors)
+        for (auto& processor : m_processors)
             if (auto res = processor(req)) Derived().IssueResponse(req, *res);
     }
 
