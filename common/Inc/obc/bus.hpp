@@ -214,8 +214,8 @@ class ListenBusMixin {
  *
  * @tparam Req The type of message sent to request data.
  * @tparam Res The type of message received in response.
- * @tparam BufUnit Fundemental type of data stored in the response buffer.
- * @tparam Buf The type of buffer used by the response.
+ * @tparam BufUnit Smallest addressable unit of data within an incoming message.
+ * @tparam Buf The type of the buffer which the result of a request is sent to.
  */
 template<
     typename T, typename Req = BasicMessage, typename Res = BasicMessage,
@@ -255,6 +255,7 @@ concept MessageFilter = requires(T& filter, const M& msg) {
  * @tparam Req The type of message sent to request data.
  * @tparam Res The type of message received in response.
  * @tparam Flt The object used to determine if an incoming message is a response
+ * to a given request.
  */
 template<
     typename T, typename Req = BasicMessage, typename Res = BasicMessage,
@@ -270,7 +271,9 @@ concept RequestBusMixinRequirements = requires(T& bus, const Req& req) {
  * @tparam Req The type of message sent to request data.
  * @tparam Res The type of message received in response.
  * @tparam Flt The object used to determine if an incoming message is a response
- * to a particular request.
+ * to a given request.
+ * @tparam BufUnit Smallest addressable unit of data within an incoming message.
+ * @tparam Buf The type of the buffer which the result of a request is sent to.
  */
 template<
     typename D, Message Req = BasicMessage, Message Res = BasicMessage,

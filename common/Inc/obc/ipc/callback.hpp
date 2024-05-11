@@ -20,8 +20,6 @@
 
 #pragma once
 
-#include <units/time.h>
-
 #include <atomic>
 #include <concepts>
 #include <cstdint>
@@ -30,6 +28,8 @@
 #include <optional>
 #include <type_traits>
 #include <variant>
+
+#include <units/time.h>
 
 #include "ipc/mutex.hpp"
 #include "scheduling/delay.hpp"
