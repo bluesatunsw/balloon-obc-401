@@ -1,0 +1,78 @@
+!SESSION 2024-04-22 13:46:34.891 -----------------------------------------------
+eclipse.buildId=Version 1.13.2
+java.version=17.0.6
+java.vendor=Eclipse Adoptium
+BootLoader constants: OS=win32, ARCH=x86_64, WS=win32, NL=en_AU
+Command-line arguments:  -os win32 -ws win32 -arch x86_64
+
+!ENTRY com.st.stm32cube.ide.mcu.informationcenter 4 4 2024-04-22 13:46:54.755
+!MESSAGE CubeMX plugin appears to be active, Log4j initialization might be too late.
+
+!ENTRY com.st.stm32cube.ide.mcu.informationcenter 1 1 2024-04-22 13:46:54.769
+!MESSAGE Log4j2 initialized with config file C:\Users\gonin\Documents\Bluesat\balloon-obc-401\.metadata\.log4j2.xml
+
+!ENTRY com.st.stm32cube.ide.mcu.ide 1 1 2024-04-22 13:46:59.897
+!MESSAGE Started RMI Server, listening on port 41337
+!SESSION 2024-04-22 13:50:36.129 -----------------------------------------------
+eclipse.buildId=Version 1.13.2
+java.version=17.0.6
+java.vendor=Eclipse Adoptium
+BootLoader constants: OS=win32, ARCH=x86_64, WS=win32, NL=en_AU
+Command-line arguments:  -os win32 -ws win32 -arch x86_64
+
+!ENTRY com.st.stm32cube.ide.mcu.informationcenter 4 4 2024-04-22 13:50:43.710
+!MESSAGE CubeMX plugin appears to be active, Log4j initialization might be too late.
+
+!ENTRY com.st.stm32cube.ide.mcu.informationcenter 1 1 2024-04-22 13:50:43.713
+!MESSAGE Log4j2 initialized with config file C:\Users\gonin\Documents\Bluesat\balloon-obc-401\.metadata\.log4j2.xml
+
+!ENTRY com.st.stm32cube.ide.mcu.ide 1 1 2024-04-22 13:50:47.496
+!MESSAGE Started RMI Server, listening on port 41337
+
+!ENTRY org.eclipse.cdt.core 1 0 2024-04-22 13:54:17.018
+!MESSAGE Indexed 'software_CM4' (7 sources, 65 headers) in 1.88 sec: 2,572 declarations; 3,427 references; 17 unresolved inclusions; 1 syntax errors; 91 unresolved names (1.5%)
+!SESSION 2024-04-22 13:55:43.423 -----------------------------------------------
+eclipse.buildId=Version 1.13.2
+java.version=17.0.6
+java.vendor=Eclipse Adoptium
+BootLoader constants: OS=win32, ARCH=x86_64, WS=win32, NL=en_AU
+Command-line arguments:  -os win32 -ws win32 -arch x86_64 -data file:/C:/Users/gonin/Documents/Bluesat/balloon-obc-401/
+
+!ENTRY com.st.stm32cube.ide.mcu.informationcenter 4 4 2024-04-22 13:55:49.268
+!MESSAGE CubeMX plugin appears to be active, Log4j initialization might be too late.
+
+!ENTRY com.st.stm32cube.ide.mcu.informationcenter 1 1 2024-04-22 13:55:49.270
+!MESSAGE Log4j2 initialized with config file C:\Users\gonin\Documents\Bluesat\balloon-obc-401\.metadata\.log4j2.xml
+
+!ENTRY com.st.stm32cube.ide.mcu.ide 1 1 2024-04-22 13:55:54.018
+!MESSAGE Started RMI Server, listening on port 41337
+!SESSION 2024-05-26 17:54:56.136 -----------------------------------------------
+eclipse.buildId=Version 1.13.2
+java.version=17.0.6
+java.vendor=Eclipse Adoptium
+BootLoader constants: OS=win32, ARCH=x86_64, WS=win32, NL=en_AU
+Command-line arguments:  -os win32 -ws win32 -arch x86_64
+
+!ENTRY com.st.stm32cube.ide.mcu.informationcenter 4 4 2024-05-26 17:55:35.231
+!MESSAGE CubeMX plugin appears to be active, Log4j initialization might be too late.
+
+!ENTRY com.st.stm32cube.ide.mcu.informationcenter 1 1 2024-05-26 17:55:35.252
+!MESSAGE Log4j2 initialized with config file C:\Users\gonin\Documents\Bluesat\balloon-obc-401\.metadata\.log4j2.xml
+
+!ENTRY com.st.stm32cube.ide.mcu.ide 1 1 2024-05-26 17:55:46.611
+!MESSAGE Started RMI Server, listening on port 41337
+!SESSION 2024-05-26 17:59:08.630 -----------------------------------------------
+eclipse.buildId=Version 1.13.2
+java.version=17.0.6
+java.vendor=Eclipse Adoptium
+BootLoader constants: OS=win32, ARCH=x86_64, WS=win32, NL=en_AU
+Command-line arguments:  -os win32 -ws win32 -arch x86_64
+
+!ENTRY com.st.stm32cube.ide.mcu.informationcenter 4 4 2024-05-26 17:59:18.018
+!MESSAGE CubeMX plugin appears to be active, Log4j initialization might be too late.
+
+!ENTRY com.st.stm32cube.ide.mcu.informationcenter 1 1 2024-05-26 17:59:18.021
+!MESSAGE Log4j2 initialized with config file C:\Users\gonin\Documents\Bluesat\balloon-obc-401\.metadata\.log4j2.xml
+
+!ENTRY com.st.stm32cube.ide.mcu.ide 1 1 2024-05-26 17:59:25.799
+!MESSAGE Started RMI Server, listening on port 41337

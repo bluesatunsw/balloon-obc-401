@@ -27,12 +27,12 @@ namespace obc::monitoring {
         Log buffer[256];
         
             // TODO
+        protected: 
 
         public:
-        LoggerStream& operator<<(const char* message) {
+        LoggerStream& operator<<(const char* message);
             // TODO
             return *this;
-        }
     };
 
     class Log {
@@ -41,9 +41,9 @@ namespace obc::monitoring {
         int err;
 
         public:
-        Log(const char* message, int err) : err(err) {
+        Log(const char* message, int err) : err(err);
             // TODO
-        }
+        
     };
 
     class Logger {
@@ -53,13 +53,12 @@ namespace obc::monitoring {
         LoggerStream stream;
 
         public:
-        Logger(int subsys) : subsys(subsys) {
+        Logger(int subsys) : subsys(subsys);
             // TODO
-        }
 
-        LoggerStream operator*() {
+        LoggerStream operator*();
             // TODO Probably call steam.operator*()
-        }
+        
 
         /* 
         Log a message to the data logger
@@ -67,8 +66,8 @@ namespace obc::monitoring {
         @param err: The error code (See Confluence)
         @param subsys: The subsystem that the error occurred in
         */
-        static void log(Log log) {
+        static void log(Log log);
             // TODO
-        }
+        
     };
 }  
