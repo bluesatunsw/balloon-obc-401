@@ -41,6 +41,7 @@ if (BALLOON_CROSS_COMPILING)
         HAL::STM32::H7::M7::FLASH
         HAL::STM32::H7::M7::HSEM
         HAL::STM32::H7::M7::I2C
+        HAL::STM32::H7::M7::I2CEx
         HAL::STM32::H7::M7::PWREx
         HAL::STM32::H7::M7::UARTEx
         HAL::STM32::H7::M7::PCDEx
