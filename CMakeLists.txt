@@ -22,6 +22,7 @@ set(CMAKE_CXX_SCAN_FOR_MODULES OFF CACHE INTERNAL "")
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}")
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}")
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}")
+include(utils/add-checks.cmake)
 
 if (CMAKE_HOST_APPLE)
     message(WARNING "[balloon-obc-401-configure] MacOS is not a fully supported platform, expect errors.")
@@ -40,8 +41,6 @@ else()
 
     enable_testing()
 endif()
-
-include(utils/checks.cmake)
 
 add_subdirectory(extern/units)
 
