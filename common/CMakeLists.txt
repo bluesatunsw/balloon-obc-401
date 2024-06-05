@@ -18,9 +18,12 @@ endif()
 add_library(common INTERFACE ${COMMON_SOURCES})
 target_include_directories(common INTERFACE
     ${PROJECT_SOURCE_DIR}/Inc
+    # ${FREERTOS_PATH}/FreeRTOS/Source/include
 )
 target_link_libraries(common INTERFACE units)
 
 if(NOT BALLOON_CROSS_COMPILING)
     add_subdirectory(Tests)
 endif()
+
+add_linter_target(common "${BALLOON_COMMON_SRCS}") # Yes, quotes necessary. CMake won't pass a list otherwise.
