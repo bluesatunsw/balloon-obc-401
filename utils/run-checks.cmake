@@ -18,7 +18,7 @@ endif()
 
 # Check for license headers.
 
-file(READ utils/license-header. BALLOON_LICENSE_HEADER)
+file(READ utils/license-header BALLOON_LICENSE_HEADER)
 
 foreach(SOURCE_FILE ${CHECK_SRCS})
     file(READ "${SOURCE_FILE}" SOURCE_CONTENTS)
