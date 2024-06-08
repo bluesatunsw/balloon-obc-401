@@ -24,5 +24,6 @@ function(add_linter_target arg1 arg2)
         # Yes, quote whole argument, otherwise list semicolons are omitted by CMake.
         ${CMAKE_COMMAND} "-DCHECK_SRCS=${arg2}" "-DCHECK_INCLUDE_DIRS=${TARGET_ALL_INCLUDE_DIRS}" "-DCHECK_DEFINITIONS=${TARGET_COMPILE_DEFS}" -P "${CMAKE_SOURCE_DIR}/utils/run-checks.cmake"
         WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}"
+        VERBATIM
     )
 endfunction()
