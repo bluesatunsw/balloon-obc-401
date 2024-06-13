@@ -22,6 +22,8 @@
 
 #include <iterator>
 
+#include "utils/error.hpp"
+
 /**
  * @brief Defines a common interface for IO ports.
  *
@@ -32,6 +34,12 @@
  * Ports are similar to input/output iterators with the type primarily being
  * used to signal intent, however there may be additional constraints placed on
  * them in future.
+ *
+ * Ports should be able to source or sink an unlimited amount of data. Reaching
+ * the end of the iterator signals some sort of error state. The error can be
+ * queried from the iterator.
+ *
+ * @todo Timeouts and error states
  *
  * @warning Data is only pulled/pushed to the port upon calling the increment
  * operator, this operation may block for an unspecified duration.

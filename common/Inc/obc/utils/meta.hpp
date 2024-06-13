@@ -30,6 +30,26 @@ concept OptionLike = requires(T t) {
 };
 
 /**
+ * @brief An appoximation of a bottom type.
+ *
+ * Bottom types are used to represent values which cannot exist in contexts
+ * where a type must be specified. In other words, a type for which there
+ * are no valid values.
+ *
+ * Unlike a true bottom type (like those in Rust), this cannot be cast into
+ * any other type. This was an intentional design choice to prevent the
+ * accidental creation and
+ *
+ * This type can be privately subclassed by other marker types to prevent
+ * construction and use.
+ */
+struct Never {
+    Never()                        = delete;
+    Never(const Never&)            = delete;
+    Never& operator=(const Never&) = delete;
+};
+
+/**
  * @brief Check if a predicate is true for all elements of the zip of the
  * element types of tuples.
  *
@@ -68,4 +88,19 @@ concept AllPairsConvertable = MultiwayConjunctionV<std::is_convertible, F, T>;
  */
 template<typename... Ts>
 class TypeAmalgam : public Ts... {};
+
+template<typename T, template<typename...> class Z>
+struct is_specialization_of : std::false_type {};
+
+template<typename... Args, template<typename...> class Z>
+struct is_specialization_of<Z<Args...>, Z> : std::true_type {};
+
+template<typename T, template<typename...> class Z>
+inline constexpr bool is_specialization_of_v =
+    is_specialization_of<T, Z>::value;
+
+template<typename T, template<typename...> class Z>
+concept Specializes = is_specialization_of_v<T, Z>;
+
+#define TEMP_NAME temp_##__COUNTER__
 }  // namespace obc::utils
