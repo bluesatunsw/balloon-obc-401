@@ -49,6 +49,8 @@
 
 # CMake Files
 /build
+**/CMakeFiles/**
+CMakeCache.txt
 
 # Clangd
 compile_commands.json

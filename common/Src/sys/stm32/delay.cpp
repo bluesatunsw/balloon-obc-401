@@ -18,16 +18,28 @@
  */
 /* USER CODE END Header */
 
-#include "obc/scheduling/delay.hpp"
+#include "obc/sys/delay.hpp"
 
+#include <FreeRTOS.h>
+#include <task.h>
 #include <units/frequency.h>
 
-namespace obc::scheduling {
-Timeout::Timeout(units::microseconds<float> period) : detail::Timeout(period) {}
+namespace obc::scheduling::detail {
+Timeout::Timeout(units::microseconds<float> period)
+    : m_period(static_cast<TickType_t>(
+          (period / units::hertz<float>(configTICK_RATE_HZ)).value()
+      )) {
+    vTaskSetTimeOutState(&m_timeout);
+}
 
-Timeout::Guard::Guard(Timeout timeout) : m_timeout(timeout) {}
+Timeout::operator bool() {
+    return xTaskCheckForTimeOut(&m_timeout, &m_period) == pdTRUE;
+}
 
-Timeout::Guard::Guard(units::microseconds<float> period) : m_timeout(period) {}
+auto Timeout::Block() -> void {
+    if (*this) return;
+    vTaskDelay(m_period);
+}
 
-Timeout::Guard::~Guard() { m_timeout.Block(); }
-}  // namespace obc::scheduling
+auto Timeout::Yield() -> void { taskYIELD(); }
+}  // namespace obc::scheduling::detail

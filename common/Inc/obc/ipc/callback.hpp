@@ -1,7 +1,7 @@
 /* USER CODE BEGIN Header */
 /*
  * 401 Ballon OBC
- * Copyright (C) 2023 Bluesat and contributors
+ * Copyright (C) 2024 Bluesat and contributors.
  *
  * This program is free software: you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the Free
@@ -20,19 +20,16 @@
 
 #pragma once
 
-#include <units/time.h>
-
-#include <atomic>
 #include <concepts>
-#include <cstdint>
 #include <functional>
 #include <mutex>
 #include <optional>
 #include <type_traits>
-#include <variant>
 
-#include "ipc/mutex.hpp"
-#include "scheduling/delay.hpp"
+#include <units/time.h>
+
+#include "obc/ipc/mutex.hpp"
+#include "obc/scheduling/delay.hpp"
 
 namespace obc::ipc {
 /**
@@ -55,7 +52,7 @@ class AsyncValue {
      *
      * @warning It is undefined behaviour to assign to an async value twice
      */
-    void Set(const T& data) {
+    auto Set(const T& data) -> void {
         std::scoped_lock lock(m_lock);
         if (!m_data) m_data = data;
     }
@@ -66,14 +63,11 @@ class AsyncValue {
      * @return std::nullopt if the value has not yet be set, otherwise a
      * reference to the value.
      */
-    std::optional<std::reference_wrapper<T>> operator()() {
+    auto operator()() -> std::optional<std::reference_wrapper<T>> {
         // Returning a reference to the underlying option would be unsafe
         std::scoped_lock lock(m_lock);
-        return m_data ? std::optional<std::reference_wrapper<T>>(m_data.value())
-                      : std::optional<std::reference_wrapper<T>>(std::nullopt);
+        return m_data ? std::optional(m_data.value()) : std::nullopt;
     }
-
-    void Foo();
 
   private:
     std::optional<T> m_data {};
@@ -115,17 +109,21 @@ struct NoDataFlag {
  */
 template<typename Mt, Mt M, typename T, CallbackData D = NoDataFlag>
 struct CallbackProvider {
-    CallbackProvider(T& inst, D data) : i_(inst), d_(data) {};
-    explicit CallbackProvider(T& inst) : i_(inst), d_() {};
+    CallbackProvider(T& inst, D data) : m_inst(inst), m_data(data) {};
+    explicit CallbackProvider(T& inst) : m_inst(inst), m_data() {};
 
-    Mt M_ {M};
-    T& i_;
-    D  d_;
+    // This is some internal magic struct which is inaccessible to users and
+    // should get optimised out
+    // NOLINTBEGIN(cppcoreguidelines-avoid-const-or-ref-data-members)
+    T& m_inst;
+    D  m_data;
+    // NOLINTEND(cppcoreguidelines-avoid-const-or-ref-data-members)
 };
 }  // namespace internal
 
-// TODO: Determine if this is possible with some other method such as template
-// deduction guides instead.
+// TODO(evan): Determine if this is possible with some other method such as
+// template deduction guides instead.
+// NOLINTBEGIN(cppcoreguidelines-macro-usage)
 
 /**
  * @brief Creates a temporary object which can be converted to a callback when
@@ -155,6 +153,8 @@ struct CallbackProvider {
         &std::remove_cvref_t<decltype(inst)>::fn,              \
         std::remove_cvref_t<decltype(inst)>, data_type>(inst, data)
 
+// NOLINTEND(cppcoreguidelines-macro-usage)
+
 /**
  * @brief A member function pointer bound to an object.
  *
@@ -178,7 +178,9 @@ class Callback {
      *
      * @return Result of invoking the callback.
      */
-    R operator()(As... args) { return m_method(m_callee, m_data, args...); }
+    auto operator()(As... args) -> R {
+        return m_method(m_callee, m_data, args...);
+    }
 
     /**
      * @brief Convert a callback provider wrapper into an actual callback type.
@@ -195,7 +197,7 @@ class Callback {
     template<typename Mt, Mt M, typename T, typename D>
     explicit(false) Callback(internal::CallbackProvider<Mt, M, T, D> prov)
         requires(std::same_as<D, internal::NoDataFlag>)
-        : m_method(&MethodWrapper<Mt, M, T>), m_callee(&prov.i_) {}
+        : m_method(&MethodWrapper<Mt, M, T>), m_callee(&prov.m_inst) {}
 
     /**
      * @see Callback::Callback
@@ -203,8 +205,9 @@ class Callback {
     template<typename Mt, Mt M, typename T, typename D>
     explicit(false) Callback(internal::CallbackProvider<Mt, M, T, D> prov)
         requires(!std::same_as<D, internal::NoDataFlag>)
-        : m_method(MethodWrapper<Mt, M, T, D>), m_callee(&prov.i_),
-          m_data(reinterpret_cast<void*>(prov.d_)) {}
+        : m_method(MethodWrapper<Mt, M, T, D>), m_callee(&prov.m_inst),
+          // NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
+          m_data(reinterpret_cast<void*>(prov.m_data)) {}
 
     /**
      * @brief Convert an async value to a callback which sets it.
@@ -240,7 +243,7 @@ class Callback {
         /**
          * @brief Function which can be converted.
          */
-        virtual R Func(As... args) final = 0;
+        virtual auto Func(As... args) -> R final = 0;
     };
 
     /**
@@ -263,19 +266,25 @@ class Callback {
      * unchanged.
      */
 
+    // No real alternative to void* for a generic variable, these are only
+    // called from internal code so it is not risky.
+    // NOLINTBEGIN(bugprone-easily-swappable-parameters)
     template<typename Mt, Mt M, typename T>
-    static R MethodWrapper(void* callee, void* data, As... args) {
+    static auto MethodWrapper(void* callee, void* /*data*/, As... args) -> R {
         return (static_cast<T*>(callee)->*M)(args...);
     }
 
     template<typename Mt, Mt M, typename T, CallbackData D>
-    static R MethodWrapper(void* callee, void* data, As... args) {
+    static auto MethodWrapper(void* callee, void* data, As... args) -> R {
         return (static_cast<T*>(callee)->*M)(
+            // NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
             reinterpret_cast<D>(data), args...
         );
     }
 
     using MethodWrapperPtr = R (*)(void*, void*, As...);
+    // NOLINTEND(bugprone-easily-swappable-parameters)
+
     /// C-style function pointer to the wrapper function.
     MethodWrapperPtr m_method {nullptr};
     /// Generic pointer to the object to which this method is bound.
@@ -288,7 +297,8 @@ template<typename T, typename R, typename... As>
 concept CallbackSource = std::convertible_to<T, Callback<R, As...>>;
 
 template<typename T, typename F, typename... As>
-std::optional<T> Await(F f, units::milliseconds<float> timeout, As... args) {
+auto Await(F f, units::milliseconds<float> timeout, As... args)
+    -> std::optional<T> {
     AsyncValue<T> res {};
     f(res, args...);
     return obc::scheduling::Timeout(timeout).Poll(res);

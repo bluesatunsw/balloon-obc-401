@@ -1,7 +1,7 @@
 /* USER CODE BEGIN Header */
 /*
  * 401 Ballon OBC
- * Copyright (C) 2023 Bluesat and contributors
+ * Copyright (C) 2024 Bluesat and contributors.
  *
  * This program is free software: you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the Free
@@ -18,15 +18,22 @@
  */
 /* USER CODE END Header */
 
-#pragma once
+#include "obc/sys/hosted/delay.hpp"
 
-#include <array>
+#include <units/frequency.h>
 
-namespace obc::ipc {
-template<typename T, size_t S>
-class NonBlockingQueue {
-  public:
-    void push(T x);
-    T    pop();
-};
-}  // namespace obc::ipc
+namespace obc::scheduling::detail {
+Timeout::Timeout(units::microseconds<float> period) {
+    // TODO(evan)
+}
+
+Timeout::operator bool() { return false; }
+
+void Timeout::Block() {
+    // TODO(evan)
+}
+
+void Timeout::Yield() {
+    // TODO(evan)
+}
+}  // namespace obc::scheduling::detail

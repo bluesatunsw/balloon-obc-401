@@ -18,16 +18,8 @@
  */
 /* USER CODE END Header */
 
-#include "obc/scheduling/delay.hpp"
+#include <obc/mock/bus.hpp>
 
-#include <units/frequency.h>
+#include <gtest/gtest.h>
 
-namespace obc::scheduling {
-Timeout::Timeout(units::microseconds<float> period) : detail::Timeout(period) {}
-
-Timeout::Guard::Guard(Timeout timeout) : m_timeout(timeout) {}
-
-Timeout::Guard::Guard(units::microseconds<float> period) : m_timeout(period) {}
-
-Timeout::Guard::~Guard() { m_timeout.Block(); }
-}  // namespace obc::scheduling
+TEST(MockBus, Listen) { ASSERT_EQ(1 + 1, 2); }

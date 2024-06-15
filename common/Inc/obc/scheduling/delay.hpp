@@ -1,7 +1,7 @@
 /* USER CODE BEGIN Header */
 /*
  * 401 Ballon OBC
- * Copyright (C) 2023 Bluesat and contributors
+ * Copyright (C) 2024 Bluesat and contributors.
  *
  * This program is free software: you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the Free
@@ -26,9 +26,13 @@
 
 #include <units/time.h>
 
-#include "FreeRTOS.h"
-#include "task.h"
-#include "utils/meta.hpp"
+#include "obc/utils/meta.hpp"
+
+#ifdef BALLOON_STM32
+#    include "obc/sys/stm32/delay.hpp"
+#elifdef BALLOON_HOSTED
+#    include "obc/sys/hosted/delay.hpp"
+#endif
 
 namespace obc::scheduling {
 /**
@@ -48,19 +52,17 @@ concept TypedPollable = requires(T t) {
  */
 template<typename T>
 concept Pollable = requires(T t) {
-    { t() } -> obc::utils::OptionLike;
+    { t() } -> obc::utils::OptionLike<T>;
 };
 
 /**
- * @brief A wrapper for FreeRTOS timeouts, providing high-level functions.
+ * @brief A wrapper for system timeouts, providing high-level functions.
  *
  * Typically used for synchronously waiting for an event, such as a response
  * from a sensor on a bus. To prevent tasks from locking up, raw retry loops
  * should be refactored to utilize this class instead.
- *
- * TODO: Add the ability to yield after each failed attempt.
  */
-class Timeout {
+class Timeout : public detail::Timeout {
   public:
     /**
      * @brief Creates a new timeout with a specified timeout period.
@@ -70,23 +72,6 @@ class Timeout {
      * @param period The duration of the timeout.
      */
     explicit Timeout(units::microseconds<float> period);
-
-    /**
-     * @brief Checks if the timeout period has elapsed.
-     *
-     * @return True if the timeout has elapsed.
-     */
-    operator bool();
-
-    /**
-     * @brief Waits for the remaining duration of the timeout.
-     *
-     * @warning Currently, this is implemented as a pure busy loop.
-     *
-     * TODO: Switch to a hybrid approach: busy loop for short periods and yield
-     * to the system scheduler for longer periods.
-     */
-    void Block();
 
     class Guard;
 
@@ -105,8 +90,10 @@ class Timeout {
      */
     template<Pollable F>
     auto Poll(F& f) -> std::optional<std::remove_reference_t<decltype(*f())>> {
-        while (!(*this))
+        do {
             if (auto x = f()) return *x;
+            Yield();
+        } while (!(*this));
         return std::nullopt;
     }
 
@@ -123,16 +110,12 @@ class Timeout {
      * @return True if the callable succeeded before the timeout.
      */
     template<TypedPollable<bool> F>
-    bool Poll(F& f) {
+    auto Poll(F& f) -> bool {
         return Poll<std::monostate>([&] {
             if (f()) return std::monostate {};
             return std::nullopt;
         });
     }
-
-  private:
-    TimeOut_t  m_timeout;
-    TickType_t m_period;
 };
 
 /**
@@ -177,6 +160,11 @@ class Timeout::Guard {
      * @param period The duration of the delay.
      */
     explicit Guard(units::microseconds<float> period);
+
+    Guard(const Guard&)                    = delete;
+    auto operator=(const Guard&) -> Guard& = delete;
+    Guard(Guard&&)                         = default;
+    auto operator=(Guard&&) -> Guard&      = default;
 
     /**
      * @brief Blocks for the remaining duration of the timeout.
