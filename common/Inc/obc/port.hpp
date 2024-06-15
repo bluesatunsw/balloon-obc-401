@@ -22,8 +22,6 @@
 
 #include <iterator>
 
-#include "utils/error.hpp"
-
 /**
  * @brief Defines a common interface for IO ports.
  *

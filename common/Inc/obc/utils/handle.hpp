@@ -46,6 +46,7 @@ class HandleChainRoot {
   public:
     class Iter;
     friend class Iter;
+    friend class Handle<T, L>;
 
     /**
      * @brief Initializes a handle chain with no elements.
@@ -78,25 +79,26 @@ class HandleChainRoot {
 
         Iter() = default;
 
-        Iter(const Iter&)            = delete;
-        Iter& operator=(const Iter&) = delete;
+        Iter(const Iter&)                    = delete;
+        auto operator=(const Iter&) -> Iter& = delete;
 
-        Iter(Iter&& other)            = default;
-        Iter& operator=(Iter&& other) = default;
+        Iter(Iter&& other)                    = default;
+        auto operator=(Iter&& other) -> Iter& = default;
+        ~Iter()                               = default;
 
         /**
          * @brief Get the payload of the current node.
          *
          * @return Pointer to the payload.
          */
-        T* operator->() { return &m_curr->m_payload; }
+        auto operator->() -> T* { return &m_curr->m_payload; }
 
         /**
          * @brief Get the payload of the current node.
          *
          * @return Reference to the payload.
          */
-        T& operator*() const { return m_curr->m_payload; }
+        auto operator*() -> T& { return m_curr->m_payload; }
 
         /**
          * @brief Compares the iterator to the sentinal value to check if at the
@@ -104,7 +106,7 @@ class HandleChainRoot {
          *
          * @return True if the iterator is at the end, false otherwise.
          */
-        bool operator==(const std::nullptr_t) const noexcept {
+        auto operator==(const std::nullptr_t) const noexcept -> bool {
             return m_curr == nullptr;
         }
 
@@ -113,7 +115,7 @@ class HandleChainRoot {
          *
          * @return Reference to the shifted iterator.
          */
-        Iter& operator++() {
+        auto operator++() -> Iter& {
             m_curr = m_curr->m_next.ptr;
             if (m_curr) {
                 std::unique_lock<L> next_lock(m_curr->m_next.lock);
@@ -128,7 +130,7 @@ class HandleChainRoot {
         /**
          * @brief Shifts the iterator to the next element in the chain.
          */
-        void operator++(int) { operator++(); }
+        auto operator++(int) -> void { operator++(); }
 
       private:
         /**
@@ -150,16 +152,16 @@ class HandleChainRoot {
      *
      * @return An iterator to the first element of the chain.
      */
-    Iter begin() { return Iter(*this); }
+    auto begin() -> Iter { return Iter(*this); }
 
     /**
      * @brief Gets the end of iteration sentinal for the chain.
      *
      * @return nullptr, as this is used as the universal sentinal.
      */
-    std::nullptr_t end() { return nullptr; }
+    auto end() -> std::nullptr_t { return nullptr; }
 
-  public:
+  private:
     /**
      * @brief Structure to hold the pointer to the next node and a lock for
      * synchronization.
@@ -204,6 +206,8 @@ class Handle : private HandleChainRoot<T, L> {
      * generic.
      */
 
+// These macros invoke cause a continue in the enclosing scope
+// NOLINTBEGIN(bugprone-macro-parentheses, cppcoreguidelines-macro-usage)
 /**
  * @brief Acquires the lock associated with an adjacent node if it exists and
  * a certain condition is met.
@@ -218,27 +222,31 @@ class Handle : private HandleChainRoot<T, L> {
  * A macro is utilized here for conciseness and clarity, which would be
  * cumbersome with regular C++ constructs.
  *
- * @param NAME Name for the pointer to the other node.
  * @param SRC Source pointer to the other node.
  * @param DIRECTION Direction from the other node to this node (either prev or
  * next).
  * @param COND Condition that must be true before acquiring the lock.
  */
-#define ACQUIRE_CELL_IF(NAME, SRC, DIRECTION, COND)                \
-    auto                NAME {SRC.ptr};                            \
-    std::unique_lock<L> NAME##_lock {};                            \
-    if (NAME && COND) {                                            \
-        NAME##_lock = {NAME->m_##DIRECTION.lock, std::defer_lock}; \
-        if (!NAME##_lock.try_lock()) continue;                     \
-    }
+#define ACQUIRE_CELL_IF(SRC, DIRECTION, COND)                          \
+    ({                                                                 \
+        auto ptr {SRC.ptr};                                            \
+        (ptr && (COND)) ? ({                                           \
+            std::unique_lock<L> lock {                                 \
+                SRC.ptr->m_##DIRECTION.lock, std::defer_lock           \
+            };                                                         \
+            if (!lock.try_lock()) continue;                            \
+            std::make_tuple(ptr, lock);                                \
+        })                                                             \
+                        : std::make_tuple(ptr, std::unique_lock<L>()); \
+    })
 
 /**
  * @brief Acquires the lock associated with an adjacent node if it exists.
  *
  * See \ref ACQUIRE_CELL_IF for more information.
  */
-#define ACQUIRE_CELL(NAME, SRC, DIRECTION) \
-    ACQUIRE_CELL_IF(NAME, SRC, DIRECTION, true)
+#define ACQUIRE_CELL(SRC, DIRECTION) ACQUIRE_CELL_IF(SRC, DIRECTION, true)
+    // NOLINTEND(bugprone-macro-parentheses, cppcoreguidelines-macro-usage)
 
   public:
     /**
@@ -252,10 +260,11 @@ class Handle : private HandleChainRoot<T, L> {
      * @param root The node after which this new node will be inserted.
      * @param payload The data to be stored in the node.
      */
-    Handle(HandleChainRoot<T, L>& root, T&& payload) : m_payload(payload) {
+    Handle(HandleChainRoot<T, L>& root, T&& payload)
+        : m_payload(std::move(payload)) {
         while (true) {
             std::scoped_lock this_lock(this->m_prev.lock, this->m_next.lock);
-            ACQUIRE_CELL(next, root.m_next, prev);
+            auto [next, next_lock] {ACQUIRE_CELL(root.m_next, prev)};
 
             if (next) {
                 next->m_prev.ptr = this;
@@ -268,8 +277,8 @@ class Handle : private HandleChainRoot<T, L> {
         }
     }
 
-    Handle(const Handle& other)            = delete;
-    Handle& operator=(const Handle& other) = delete;
+    Handle(const Handle& other)                    = delete;
+    auto operator=(const Handle& other) -> Handle& = delete;
 
     /**
      * @brief Moves the handle to a new location, updating pointers in adjacent
@@ -280,8 +289,8 @@ class Handle : private HandleChainRoot<T, L> {
     Handle(Handle&& other) noexcept {
         while (true) {
             std::scoped_lock other_lock(other.m_next.lock, other.m_prev.lock);
-            ACQUIRE_CELL(prev, other.m_prev, next);
-            ACQUIRE_CELL(next, other.m_next, prev);
+            auto [prev, prev_lock] {ACQUIRE_CELL(other.m_prev, next)};
+            auto [next, next_lock] {ACQUIRE_CELL(other.m_next, prev)};
 
             if (prev) {
                 prev->m_next.ptr = this;
@@ -306,7 +315,7 @@ class Handle : private HandleChainRoot<T, L> {
      * The other handle is removed from the chain, and its contents are moved
      * into this one. Adjacent nodes to the other node are updated to bypass it.
      */
-    Handle& operator=(Handle&& other) noexcept {
+    auto operator=(Handle&& other) noexcept -> Handle& {
         if (this == &other) return *this;
 
         while (true) {
@@ -318,10 +327,18 @@ class Handle : private HandleChainRoot<T, L> {
             // Handles cases where this and other are adjacent
             bool next_is_other {this->m_next.ptr == &other};
             bool prev_is_other {this->m_prev.ptr == &other};
-            ACQUIRE_CELL_IF(this_prev, this->m_prev, next, !prev_is_other);
-            ACQUIRE_CELL_IF(this_next, this->m_next, prev, !next_is_other);
-            ACQUIRE_CELL_IF(other_prev, other.m_prev, next, !next_is_other);
-            ACQUIRE_CELL_IF(other_next, other.m_next, prev, !prev_is_other);
+            auto [this_prev, this_prev_lock] {
+                ACQUIRE_CELL_IF(this->m_prev, next, !prev_is_other)
+            };
+            auto [this_next, this_next_lock] {
+                ACQUIRE_CELL_IF(this->m_next, prev, !next_is_other)
+            };
+            auto [other_prev, other_prev_lock] {
+                ACQUIRE_CELL_IF(other.m_prev, next, !next_is_other)
+            };
+            auto [other_next, other_next_lock] {
+                ACQUIRE_CELL_IF(other.m_next, prev, !prev_is_other)
+            };
 
             if (other_prev) other_prev->m_next.ptr = other_next;
             if (other_next) other_next->m_prev.ptr = other_prev;
@@ -341,8 +358,8 @@ class Handle : private HandleChainRoot<T, L> {
         while (true) {
             std::scoped_lock this_lock(this->m_next.lock, this->m_prev.lock);
 
-            ACQUIRE_CELL(prev, this->m_prev, next);
-            ACQUIRE_CELL(next, this->m_next, prev);
+            auto [prev, prev_lock] {ACQUIRE_CELL(this->m_prev, next)};
+            auto [next, next_lock] {ACQUIRE_CELL(this->m_next, prev)};
 
             if (next) next->m_prev.ptr = prev;
             if (prev) prev->m_next.ptr = next;
