@@ -42,7 +42,7 @@ class Timeout {
      *
      * @return True if the timeout has elapsed.
      */
-    operator bool();
+    explicit(false) operator bool();
 
     /**
      * @brief Waits for the remaining duration of the timeout.
@@ -52,7 +52,7 @@ class Timeout {
      * TODO: Switch to a hybrid approach: busy loop for short periods and yield
      * to the system scheduler for longer periods.
      */
-    void Block();
+    auto Block() -> void;
 
   protected:
     /**
@@ -65,6 +65,6 @@ class Timeout {
      * elapsed. However, when polling for a condition a final check should be
      * performed after the final yield.
      */
-    void Yield();
+    auto Yield() -> void;
 };
 }  // namespace obc::scheduling::detail

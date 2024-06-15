@@ -17,7 +17,6 @@ if (NOT DEFINED USE_FULL_CLANG_TIDY_RUN)
 endif()
 
 # Check for license headers.
-
 file(READ utils/license-header BALLOON_LICENSE_HEADER)
 
 foreach(SOURCE_FILE ${CHECK_SRCS})
@@ -29,7 +28,6 @@ foreach(SOURCE_FILE ${CHECK_SRCS})
 endforeach()
 
 # clang-format
-
 find_program(CLANG_FORMAT_COMMAND "clang-format")
 if (CLANG_FORMAT_COMMAND)
     foreach(SOURCE_FILE ${CHECK_SRCS})
@@ -43,7 +41,6 @@ else()
 endif()
 
 # clang-tidy
-
 set(INCLUDES_CLI_ARGS "")
 foreach(INCLUDE ${CHECK_INCLUDE_DIRS})
     set(INCLUDES_CLI_ARGS ${INCLUDES_CLI_ARGS} -I ${INCLUDE})
@@ -58,7 +55,7 @@ find_program(CLANG_TIDY_COMMAND "clang-tidy")
 if (CLANG_TIDY_COMMAND)
     foreach(SOURCE_FILE ${CHECK_SRCS})
         execute_process(
-            COMMAND "${CLANG_TIDY_COMMAND}" "${SOURCE_FILE}" -header-filter=.* -- -std=c++23 ${INCLUDES_CLI_ARGS} ${DEFS_CLI_ARGS}
+            COMMAND "${CLANG_TIDY_COMMAND}" "${SOURCE_FILE}" -header-filter=.* -- -std=gnu++23 ${INCLUDES_CLI_ARGS} ${DEFS_CLI_ARGS}
             COMMAND_ECHO STDOUT
         )
     endforeach()

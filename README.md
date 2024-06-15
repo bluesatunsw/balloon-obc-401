@@ -25,9 +25,9 @@ git submodule update --init --remote --recursive
 All commands should be run from the root directory of the project. To build everything run:
 ```sh
 cmake -DCMAKE_C_COMPILER=[C_COMPILER] -DCMAKE_CXX_COMPILER=[CPP_COMPILER] -Bbuild .
-cmake --build build --config Debug --target all
+cmake --build build --config Debug --target obc_m7
 ```
-`[C_COMPILER]` and `[CPP_COMPILER]` must be replaced with with the compiler which corresponds to the hardware being targetted. For local testing this is `gcc` and `g++`, for deployment to STM32 this is `gcc-arm-none-gcc` and `gcc-arm-none-g++`.
+`[C_COMPILER]` and `[CPP_COMPILER]` must be replaced with with the compiler which corresponds to the hardware being targetted. For local testing this is `gcc` and `g++`, for deployment to STM32 this is `gcc-arm-none-gcc` and `gcc-arm-none-g++`. When switching compiler, CMake will frequently get confused, if this occours delete the build directory.
 
 ### Local Testing
 Units tests are run with GTest. To run all tests use CTest (a part of CMake).
@@ -69,5 +69,11 @@ For initial development, only a single core will be used to reduce complexity. H
 Every change to the code should done on a separate branch which will be rebased (not merged) into `main`. Each branch should be associated with an issue and prefixed with the issue number (eg. `19-spi-bus-abstraction`).
 
 ## Linting
-A limited wrapped around Clang Tidy/Format has be included into this project.
-All code should pass these checks (consider using a pre-commit hook).
+A limited wrapped around Clang Tidy/Format has be included into this project. All code should pass these checks (consider using a pre-commit hook).
+
+The linter can be invoked with the target prefixed with `check-`, eg. `check-obc_m7`. This process is orders of magnitude slower than code compilation. To format code in place run:
+```sh
+clang-format -i -style="file:.clang-format" [FILE]
+# Globs are allowed
+clang-format -i -style="file:.clang-format" common/**.hpp
+```

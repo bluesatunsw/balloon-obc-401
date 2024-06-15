@@ -39,19 +39,19 @@ class Mutex {
     /**
      * @brief Locks the mutex, blocking if necessary.
      */
-    void lock();
+    auto lock() -> void;
 
     /**
      * @brief Unlocks the mutex.
      */
-    void unlock();
+    auto unlock() -> void;
 
     /**
      * @brief Attempts to lock the mutex without blocking.
      *
      * @return True if the lock was acquired successfully, false otherwise.
      */
-    bool try_lock();
+    auto try_lock() -> bool;
 
   private:
     SemaphoreHandle_t m_handle;
@@ -98,19 +98,19 @@ class SpinLock {
     /**
      * @brief Locks the spinlock, actively waiting if necessary.
      */
-    void lock();
+    auto lock() -> void;
 
     /**
      * @brief Unlocks the spinlock.
      */
-    void unlock();
+    auto unlock() -> void;
 
     /**
      * @brief Attempts to lock the spinlock without blocking.
      *
      * @return True if the lock was acquired successfully, false otherwise.
      */
-    bool try_lock();
+    auto try_lock() -> bool;
 
   private:
     std::atomic_flag m_lock {false};

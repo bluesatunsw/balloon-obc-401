@@ -1,3 +1,25 @@
+/* USER CODE BEGIN Header */
+/*
+ * 401 Ballon OBC
+ * Copyright (C) 2024 Bluesat and contributors.
+ *
+ * This program is free software: you can redistribute it and/or modify it
+ * under the terms of the GNU General Public License as published by the Free
+ * Software Foundation, either version 3 of the License, or (at your option)
+ * any later version.
+ *
+ * This program is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for
+ * more details.
+ *
+ * You should have received a copy of the GNU General Public License along with
+ * this program. If not, see <https://www.gnu.org/licenses/>.
+ */
+/* USER CODE END Header */
+
+#pragma once
+
 #include <concepts>
 #include <cstddef>
 #include <tuple>
@@ -42,11 +64,17 @@ concept OptionLike = requires(T t) {
  *
  * This type can be privately subclassed by other marker types to prevent
  * construction and use.
+ *
+ * It is possible to move and destruct a never type purely to allow templates
+ * to keep working.
  */
 struct Never {
-    Never()                        = delete;
-    Never(const Never&)            = delete;
-    Never& operator=(const Never&) = delete;
+    Never()                                = delete;
+    Never(const Never&)                    = delete;
+    auto operator=(const Never&) -> Never& = delete;
+    Never(Never&&)                         = default;
+    auto operator=(Never&&) -> Never&      = default;
+    ~Never()                               = default;
 };
 
 /**
@@ -90,17 +118,16 @@ template<typename... Ts>
 class TypeAmalgam : public Ts... {};
 
 template<typename T, template<typename...> class Z>
-struct is_specialization_of : std::false_type {};
+struct IsSpecializationOf : std::false_type {};
 
 template<typename... Args, template<typename...> class Z>
-struct is_specialization_of<Z<Args...>, Z> : std::true_type {};
+struct IsSpecializationOf<Z<Args...>, Z> : std::true_type {};
 
 template<typename T, template<typename...> class Z>
-inline constexpr bool is_specialization_of_v =
-    is_specialization_of<T, Z>::value;
+inline constexpr bool IsSpecializationOfV = IsSpecializationOf<T, Z>::value;
 
 template<typename T, template<typename...> class Z>
-concept Specializes = is_specialization_of_v<T, Z>;
+concept Specializes = IsSpecializationOfV<T, Z>;
 
 #define TEMP_NAME temp_##__COUNTER__
 }  // namespace obc::utils

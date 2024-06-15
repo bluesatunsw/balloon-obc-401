@@ -20,10 +20,9 @@
 
 #pragma once
 
-#include <atomic>
-#include <cassert>
 #include <concepts>
 #include <cstddef>
+#include <cstdint>
 #include <expected>
 #include <optional>
 #include <span>
@@ -31,6 +30,7 @@
 #include "obc/ipc/callback.hpp"
 #include "obc/utils/error.hpp"
 #include "obc/utils/handle.hpp"
+#include "obc/utils/meta.hpp"
 
 /**
  * @brief Defines a common interface for communication buses.
@@ -84,8 +84,8 @@ struct BasicMessage {
     using Address = std::uint32_t;
     using Data    = std::span<std::byte>;
 
-    Address address;
-    Data    data;
+    Address address {};
+    Data    data {};
 };
 
 /**
@@ -113,26 +113,10 @@ concept Buffer = requires(T& buf, V v, std::size_t i) {
  */
 template<typename T>
     requires std::is_trivially_copyable_v<T>
-auto StructAsBuffer(T& s) {
-    return std::span<std::byte, sizeof(T)> {
-        reinterpret_cast<std::byte*>(&s), sizeof(T)
-    };
-}
-
-/**
- * @brief Convert a trivial struct into a byte buffer.
- *
- * Can be used to facilitate trivial deserialization of C-style structs sent on
- * a bus.
- *
- * @tparam T type of the struct to translate.
- */
-template<typename T>
-    requires std::is_trivially_copyable_v<T>
-auto StructAsBuffer(T&& s) {
-    return std::span<std::byte, sizeof(T)> {
-        reinterpret_cast<std::byte*>(&s), sizeof(T)
-    };
+auto StructAsBuffer(T& s) -> std::span<std::byte, sizeof(T)> {
+    // This function is constrained to only operate on POD structs
+    // NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
+    return {reinterpret_cast<std::byte*>(&s), sizeof(T)};
 }
 
 /**
@@ -193,7 +177,8 @@ class ListenBusMixin {
      * @return An opaque handle that must be retained for the listener to remain
      * active.
      */
-    std::expected<ListenHandle, ListenError> Listen(ListenCallback&& cb) {
+    auto Listen(ListenCallback&& cb)
+        -> std::expected<ListenHandle, ListenError> {
         return ListenHandle(m_listeners, std::move(cb));
     }
 
@@ -205,12 +190,12 @@ class ListenBusMixin {
      *
      * @param msg The message to be forwarded.
      */
-    void FeedListeners(const M& msg) {
+    auto FeedListeners(const M& msg) -> void {
         for (const auto& callback : m_listeners) callback(msg);
     }
 
   private:
-    utils::HandleChainRoot<ListenCallback> m_listeners;
+    utils::HandleChainRoot<ListenCallback> m_listeners {};
 };
 
 /**
@@ -299,6 +284,15 @@ class RequestBusMixin {
         RequestCallback callback;
     };
 
+    /**
+     * @brief Safely gets the CRTP derived class.
+     *
+     * @return Reference to derived class.
+     */
+    auto Derived() -> RequestBusMixinRequirements<Req, Flt> auto& {
+        return static_cast<D&>(*this);
+    }
+
   public:
     using RequestHandle = utils::Handle<RequestHandleData>;
     using RequestError  = decltype(Derived().IssueRequest(
@@ -313,16 +307,13 @@ class RequestBusMixin {
      * @return An opaque handle that must be retained until the request is
      * fulfilled or the response is no longer desired.
      */
-    std::expected<RequestHandle, RequestError> Request(
-        const Req& req, RequestCallback&& cb, Buf buf
-    ) {
-        if (auto filter = Derived().IssueRequest(req, buf)) {
-            return RequestHandle(
-                m_request_handlers, {.filter = filter.value(), .callback = cb}
-            );
-        } else {
-            return std::unexpected(filter.error());
-        }
+    auto Request(const Req& req, RequestCallback&& cb, Buf buf)
+        -> std::expected<RequestHandle, RequestError> {
+        return RequestHandle(
+            m_request_handlers,
+            {.filter   = UNWRAP(Derived().IssueRequest(req, buf)),
+             .callback = std::move(cb)}
+        );
     }
 
   protected:
@@ -334,22 +325,13 @@ class RequestBusMixin {
      *
      * @param res The response message to forward.
      */
-    void FeedRequesters(const Res& res) {
+    auto FeedRequesters(const Res& res) -> void {
         for (auto& handler : m_request_handlers)
             if (handler.data.filter(res)) handler.data.callback(res);
     }
 
   private:
-    /**
-     * @brief Safely gets the CRTP derived class.
-     *
-     * @return Reference to derived class.
-     */
-    RequestBusMixinRequirements<Req, Flt> auto& Derived() {
-        return static_cast<D&>(*this);
-    }
-
-    utils::HandleChainRoot<RequestHandleData> m_request_handlers;
+    utils::HandleChainRoot<RequestHandleData> m_request_handlers {};
 };
 
 /**
@@ -415,7 +397,8 @@ class ProcessBusMixin {
      * @return An opaque handle that must be retained for the processor to
      * remain active.
      */
-    std::expected<ProcessHandle, ProcessError> Process(ProcessCallback&& cb) {
+    auto Process(ProcessCallback&& cb)
+        -> std::expected<ProcessHandle, ProcessError> {
         return ProcessHandle(m_processors, std::move(cb));
     }
 
@@ -427,7 +410,7 @@ class ProcessBusMixin {
      *
      * @param req The request message to forward.
      */
-    void FeedProcessors(const Req& req) {
+    auto FeedProcessors(const Req& req) -> void {
         for (const auto& processor : m_processors)
             if (auto res = processor(req)) Derived().IssueResponse(req, *res);
     }
@@ -438,10 +421,10 @@ class ProcessBusMixin {
      *
      * @return Reference to derived class.
      */
-    ProcessBusMixinRequirements<Req, Res> auto& Derived() {
+    auto Derived() -> ProcessBusMixinRequirements<Req, Res> auto& {
         return static_cast<D&>(*this);
     }
 
-    utils::HandleChainRoot<ProcessCallback> m_processors;
+    utils::HandleChainRoot<ProcessCallback> m_processors {};
 };
 }  // namespace obc::bus

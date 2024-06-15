@@ -41,6 +41,9 @@ namespace obc::scheduling {
  */
 class Task {
   public:
+    // This is interfacing with C-Style FreeRTOS code which uses out
+    // parameters to initialise values
+    // NOLINTBEGIN(cppcoreguidelines-pro-type-member-init,hicpp-member-init)
     /**
      * @brief Creates and starts a new task.
      */
@@ -50,31 +53,37 @@ class Task {
               &m_task_data
           )} {}
 
+    // NOLINTEND(cppcoreguidelines-pro-type-member-init,hicpp-member-init)
+
     Task(const Task& other) = delete;
     Task(Task&& other)      = delete;
 
-    Task& operator=(const Task& other) = delete;
-    Task& operator=(Task&& other)      = delete;
+    auto operator=(const Task& other) -> Task& = delete;
+    auto operator=(Task&& other) -> Task&      = delete;
 
     /**
      * @brief Stops the underlying task immediately.
      */
-    inline ~Task() { vTaskDelete(NULL); }
+    virtual inline ~Task() { vTaskDelete(NULL); }
 
   protected:
     /**
      * @brief The function to be called periodically to execute the task.
      */
-    virtual void Run() = 0;
+    virtual auto Run() -> void = 0;
 
     /**
      * @brief Gets the name of the task.
      *
      * Primarily used for logging and debugging purposes.
      */
-    constexpr virtual const char* Name() const { return "Unnamed Task"; }
+    [[nodiscard]] constexpr virtual auto Name() const -> const char* {
+        return "Unnamed Task";
+    }
 
-    constexpr virtual osPriority Priority() const { return osPriorityNormal; }
+    [[nodiscard]] constexpr virtual auto Priority() const -> osPriority {
+        return osPriorityNormal;
+    }
 
     /**
      * @brief Gets the length of the period of time between re-executions of the
@@ -87,7 +96,8 @@ class Task {
      * TODO: Add compensation so that the average period will tend towards the
      * `NominalPeriod`.
      */
-    constexpr virtual units::microseconds<float> NominalPeriod() const {
+    [[nodiscard]] constexpr virtual auto NominalPeriod() const
+        -> units::microseconds<float> {
         return units::microseconds<float>(1000);
     }
 
@@ -97,9 +107,9 @@ class Task {
      *
      * Repeatedly invokes the periodic run function each NominalPeriod.
      */
-    inline static void RTOSTask(void* instance) {
-        // TODO: Eliminate extra layer of indirection
-        auto task {static_cast<Task*>(instance)};
+    inline static auto RTOSTask(void* instance) -> void {
+        // TODO(evan): Eliminate extra layer of indirection
+        auto* task {static_cast<Task*>(instance)};
         while (true) {
             scheduling::Timeout::Guard timeout {task->NominalPeriod()};
             task->Run();
@@ -112,12 +122,12 @@ class Task {
     StaticTask_t m_task_data;
 };
 
-constexpr std::uint32_t DefaultStackDepth = 4096;
+constexpr std::uint32_t kDefaultStackDepth = 4096;
 
 /**
  * @brief Mixin class to statically create a fixed-size stack for a task.
  */
-template<std::uint32_t StackDepth = DefaultStackDepth>
+template<std::uint32_t StackDepth = kDefaultStackDepth>
 class StackTask {
   protected:
     std::array<StackType_t, StackDepth> m_task_stack {};

@@ -36,10 +36,10 @@ Timeout::operator bool() {
     return xTaskCheckForTimeOut(&m_timeout, &m_period) == pdTRUE;
 }
 
-void Timeout::Block() {
+auto Timeout::Block() -> void {
     if (*this) return;
     vTaskDelay(m_period);
 }
 
-void Timeout::Yield() { taskYIELD(); }
+auto Timeout::Yield() -> void { taskYIELD(); }
 }  // namespace obc::scheduling::detail

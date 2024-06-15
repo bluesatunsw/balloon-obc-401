@@ -1,5 +1,5 @@
-function(add_linter_target arg1 arg2)
-    set(TARGET_NAME ${arg1})
+function(add_linter_target target_name sources)
+    set(TARGET_NAME ${target_name})
 
     if(NOT TARGET ${TARGET_NAME})
         message(FATAL_ERROR "Target ${TARGET_NAME} not found, can't be checked.")
@@ -13,6 +13,7 @@ function(add_linter_target arg1 arg2)
     if (TARGET_INTERFACE_INCLUDE_DIRS)
         list(APPEND TARGET_ALL_INCLUDE_DIRS ${TARGET_INTERFACE_INCLUDE_DIRS})
     endif()
+    list(REMOVE_DUPLICATES TARGET_ALL_INCLUDE_DIRS)
 
     get_target_property(TARGET_COMPILE_DEFS ${TARGET_NAME} COMPILE_DEFINITIONS)
     if (NOT TARGET_COMPILE_DEFS)
@@ -22,7 +23,7 @@ function(add_linter_target arg1 arg2)
     add_custom_target(check-${TARGET_NAME}
         ALL
         # Yes, quote whole argument, otherwise list semicolons are omitted by CMake.
-        ${CMAKE_COMMAND} "-DCHECK_SRCS=${arg2}" "-DCHECK_INCLUDE_DIRS=${TARGET_ALL_INCLUDE_DIRS}" "-DCHECK_DEFINITIONS=${TARGET_COMPILE_DEFS}" -P "${CMAKE_SOURCE_DIR}/utils/run-checks.cmake"
+        ${CMAKE_COMMAND} "-DCHECK_SRCS=${sources}" "-DCHECK_INCLUDE_DIRS=${TARGET_ALL_INCLUDE_DIRS}" "-DCHECK_DEFINITIONS=${TARGET_COMPILE_DEFS}" -P "${CMAKE_SOURCE_DIR}/utils/run-checks.cmake"
         WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}"
         VERBATIM
     )

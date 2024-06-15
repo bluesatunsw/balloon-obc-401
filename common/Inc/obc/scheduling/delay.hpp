@@ -110,7 +110,7 @@ class Timeout : public detail::Timeout {
      * @return True if the callable succeeded before the timeout.
      */
     template<TypedPollable<bool> F>
-    bool Poll(F& f) {
+    auto Poll(F& f) -> bool {
         return Poll<std::monostate>([&] {
             if (f()) return std::monostate {};
             return std::nullopt;
@@ -160,6 +160,11 @@ class Timeout::Guard {
      * @param period The duration of the delay.
      */
     explicit Guard(units::microseconds<float> period);
+
+    Guard(const Guard&)                    = delete;
+    auto operator=(const Guard&) -> Guard& = delete;
+    Guard(Guard&&)                         = default;
+    auto operator=(Guard&&) -> Guard&      = default;
 
     /**
      * @brief Blocks for the remaining duration of the timeout.
