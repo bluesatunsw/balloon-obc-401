@@ -4,7 +4,7 @@ jobs:
   build:
     strategy:
       matrix:
-        platform: [{ os: windows-latest, shell: 'msys2 {0}', gen: 'MSYS Makefiles' }, { os: ubuntu-latest, shell: bash, gen: 'Ninja' }]
+        platform: [{ os: windows-latest, shell: 'msys2 {0}', gen: 'MSYS Makefiles' }, { os: ubuntu-24.04, shell: bash, gen: 'Ninja' }]
         toolchain: [{ cross: true, cpref: 'arm-none-eabi-' }, { cross: false, cpref: '' }]
     runs-on: ${{ matrix.platform.os }}
     defaults:
@@ -29,14 +29,14 @@ jobs:
         msystem: mingw64
         install: mingw-w64-x86_64-toolchain
     - name: Linux Toolchain (arm-cross)
-      if: ${{ matrix.platform.os == 'ubuntu-latest' && matrix.toolchain.cross }}
+      if: ${{ matrix.platform.os == 'ubuntu-24.04' && matrix.toolchain.cross }}
       run: |
         sudo apt-get update
         sudo apt-get upgrade
         sudo apt install -y gcc-arm-none-eabi
         sudo apt-get install -y ninja-build
     - name: Linux Toolchain (host=target)
-      if: ${{ matrix.platform.os == 'ubuntu-latest' && !matrix.toolchain.cross }}
+      if: ${{ matrix.platform.os == 'ubuntu-24.04' && !matrix.toolchain.cross }}
       run: |
         sudo apt-get update
         sudo apt-get upgrade
