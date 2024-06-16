@@ -27,6 +27,8 @@
 #include <optional>
 #include <span>
 
+#include <units/time.h>
+
 #include "obc/ipc/callback.hpp"
 #include "obc/utils/error.hpp"
 #include "obc/utils/handle.hpp"
@@ -108,7 +110,7 @@ concept Buffer = requires(T& buf, V v, std::size_t i) {
  *
  * Can be used to facilitate trivial deserialization of C-style structs sent on
  * a bus.
- * 
+ *
  * @warning For portability, the struct should be tightly packed (containing
  * explicit padding fields if required) with fixed sized integers.
  *
@@ -127,7 +129,7 @@ auto StructAsBuffer(const T& s) -> std::span<const std::byte, sizeof(T)> {
  *
  * Can be used to facilitate trivial deserialization of C-style structs sent on
  * a bus.
- * 
+ *
  * @warning For portability, the struct should be tightly packed (containing
  * explicit padding fields if required) with fixed sized integers.
  *
@@ -149,9 +151,14 @@ auto StructAsBuffer(T& s) -> std::span<std::byte, sizeof(T)> {
  * @tparam M The type of message to send.
  */
 template<typename T, typename M = BasicMessage>
-concept SendBus = requires(T& bus, const M& msg) {
-    { bus.Send(msg) } -> std::same_as<void>;
-} && Message<M>;
+concept SendBus =
+    requires(T& bus, const M& msg, const units::milliseconds<float> timeout) {
+        typename T::SendError;
+
+        {
+            bus.Send(msg, timeout)
+        } -> std::same_as<std::expected<std::monostate, typename T::SendError>>;
+    } && utils::MaybeError<typename T::SendError> && Message<M>;
 
 /**
  * @brief Represents a bus that can listen to all received messages.
@@ -238,13 +245,14 @@ template<
 concept RequestBus =
     requires(
         T& bus, const Req& req,
-        ipc::Callback<void, const Res&>::DummyProvider cb, Buf& buf
+        ipc::Callback<void, const Res&>::DummyProvider cb, Buf& buf,
+        const units::milliseconds<float> timeout
     ) {
         typename T::RequestHandle;
         typename T::RequestError;
 
         {
-            bus.Request(req, cb.Func, buf)
+            bus.Request(req, cb.Func, buf, timeout)
         } -> std::same_as<
             std::expected<typename T::RequestHandle, typename T::RequestError>>;
     } &&
@@ -278,9 +286,10 @@ concept MessageFilter = requires(T& filter, const M& msg) {
 template<
     typename T, typename Req = BasicMessage, typename Res = BasicMessage,
     typename Flt = ipc::Callback<bool, const Res&>>
-concept RequestBusMixinRequirements = requires(T& bus, const Req& req) {
-    { bus.IssueRequest(req) } -> utils::ExpectedReturn<Flt>;
-} && Message<Req> && Message<Res> && MessageFilter<Flt>;
+concept RequestBusMixinRequirements =
+    requires(T& bus, const Req& req, const units::milliseconds<float> timeout) {
+        { bus.IssueRequest(req, timeout) } -> utils::ExpectedReturn<Flt>;
+    } && Message<Req> && Message<Res> && MessageFilter<Flt>;
 
 /**
  * @brief A helper class for implementing request functionality.
@@ -329,11 +338,13 @@ class RequestBusMixin {
      * @return An opaque handle that must be retained until the request is
      * fulfilled or the response is no longer desired.
      */
-    auto Request(const Req& req, RequestCallback&& cb, Buf buf)
-        -> std::expected<RequestHandle, RequestError> {
+    auto Request(
+        const Req& req, RequestCallback&& cb, Buf buf,
+        const units::milliseconds<float> timeout
+    ) -> std::expected<RequestHandle, RequestError> {
         return RequestHandle(
             m_request_handlers,
-            {.filter   = UNWRAP(Derived().IssueRequest(req, buf)),
+            {.filter   = UNWRAP(Derived().IssueRequest(req, buf, timeout)),
              .callback = std::move(cb)}
         );
     }

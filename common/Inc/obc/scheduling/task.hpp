@@ -41,20 +41,6 @@ namespace obc::scheduling {
  */
 class Task {
   public:
-    // This is interfacing with C-Style FreeRTOS code which uses out
-    // parameters to initialise values
-    // NOLINTBEGIN(cppcoreguidelines-pro-type-member-init,hicpp-member-init)
-    /**
-     * @brief Creates and starts a new task.
-     */
-    inline Task(std::span<StackType_t> stack)
-        : m_handle {xTaskCreateStatic(
-              &RTOSTask, Name(), stack.size(), this, Priority(), stack.data(),
-              &m_task_data
-          )} {}
-
-    // NOLINTEND(cppcoreguidelines-pro-type-member-init,hicpp-member-init)
-
     Task(const Task& other) = delete;
     Task(Task&& other)      = delete;
 
@@ -67,39 +53,30 @@ class Task {
     virtual inline ~Task() { vTaskDelete(NULL); }
 
   protected:
+    // This is interfacing with C-Style FreeRTOS code which uses out
+    // parameters to initialise values
+    // NOLINTBEGIN(cppcoreguidelines-pro-type-member-init,hicpp-member-init)
+    /**
+     * @brief Creates and starts a new task.
+     */
+    inline Task(
+        std::span<StackType_t> stack, const char* name = "Unnamed Task",
+        const units::milliseconds<float> nominal_period =
+            units::milliseconds<float>(10),
+        const osPriority priority = osPriorityNormal
+    )
+        : m_handle {xTaskCreateStatic(
+              &RTOSTask, name, stack.size(), this, priority, stack.data(),
+              &m_task_data
+          )},
+          m_nominal_period {nominal_period} {};
+
+    // NOLINTEND(cppcoreguidelines-pro-type-member-init,hicpp-member-init)
+
     /**
      * @brief The function to be called periodically to execute the task.
      */
     virtual auto Run() -> void = 0;
-
-    /**
-     * @brief Gets the name of the task.
-     *
-     * Primarily used for logging and debugging purposes.
-     */
-    [[nodiscard]] constexpr virtual auto Name() const -> const char* {
-        return "Unnamed Task";
-    }
-
-    [[nodiscard]] constexpr virtual auto Priority() const -> osPriority {
-        return osPriorityNormal;
-    }
-
-    /**
-     * @brief Gets the length of the period of time between re-executions of the
-     * `Run` function.
-     *
-     * @warning This time period is actually the time before the task is allowed
-     * to be rerun, so the true period between executions will be slightly
-     * longer.
-     *
-     * TODO: Add compensation so that the average period will tend towards the
-     * `NominalPeriod`.
-     */
-    [[nodiscard]] constexpr virtual auto NominalPeriod() const
-        -> units::microseconds<float> {
-        return units::microseconds<float>(1000);
-    }
 
   private:
     /**
@@ -111,15 +88,18 @@ class Task {
         // TODO(evan): Eliminate extra layer of indirection
         auto* task {static_cast<Task*>(instance)};
         while (true) {
-            scheduling::Timeout::Guard timeout {task->NominalPeriod()};
+            // TODO(evan): Add compensation so that the average period will
+            // tend towards the nominal_period
+            scheduling::Timeout::Guard timeout {task->m_nominal_period};
             task->Run();
         }
 
         vTaskDelete(NULL);
     }
 
-    TaskHandle_t m_handle;
-    StaticTask_t m_task_data;
+    TaskHandle_t               m_handle;
+    StaticTask_t               m_task_data;
+    units::milliseconds<float> m_nominal_period;
 };
 
 constexpr std::uint32_t kDefaultStackDepth = 4096;
@@ -128,8 +108,17 @@ constexpr std::uint32_t kDefaultStackDepth = 4096;
  * @brief Mixin class to statically create a fixed-size stack for a task.
  */
 template<std::uint32_t StackDepth = kDefaultStackDepth>
-class StackTask {
+class StackTask : public Task {
   protected:
+    StackTask(
+        const char*                      name = "Unnamed Task",
+        const units::milliseconds<float> nominal_period =
+            units::milliseconds<float>(10),
+        const osPriority priority = osPriorityNormal
+    )
+        : Task(m_task_stack, name, nominal_period, priority) = default;
+
+  private:
     std::array<StackType_t, StackDepth> m_task_stack {};
 };
 }  // namespace obc::scheduling

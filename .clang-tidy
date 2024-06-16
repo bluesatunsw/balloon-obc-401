@@ -8,13 +8,14 @@ Checks: -*,bugprone-*,cert-*,clang-analyzer-*,concurrency-*,
   -cert-err58-cpp,-fuchsia-trailing-return,-cppcoreguidelines-avoid-do-while,
   -google-explicit-constructor,-hicpp-explicit-conversions,
   -fuchsia-overloaded-operator,-cppcoreguidelines-rvalue-reference-param-not-moved,
-  -clang-diagnostic-error
+  -clang-diagnostic-error,-fuchsia-default-arguments-declarations
 HeaderFilterRegex: ^((?!/lib/).)*(src|include)/((?!/lib/).)*$
 UseColor: true
 CheckOptions:
   readability-identifier-naming.VariableCase: lower_case
   readability-identifier-naming.ConstantCase: CamelCase
   readability-identifier-naming.ConstantPrefix: k
+  readability-identifier-naming.ConstantParameterCase: lower_case
   readability-identifier-naming.ConstantIgnoredRegexp: .*V$
   readability-identifier-naming.FunctionCase: CamelCase
   readability-identifier-naming.FunctionIgnoredRegexp: ^(begin|end)$
