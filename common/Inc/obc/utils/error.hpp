@@ -23,6 +23,8 @@
 #include <concepts>
 #include <expected>
 
+#include <stm32h7xx_hal_def.h>
+
 #include "obc/utils/meta.hpp"
 
 namespace obc::utils {
@@ -35,7 +37,7 @@ namespace obc::utils {
  *
  * @warning MaybeError is not a valid return type for a function
  * which may fail or return nothing. You probably want to use
- * `std::optional<Error>` instead.
+ * `std::expected<std::monostate, Error>` instead.
  */
 template<typename T>
 concept MaybeError = std::same_as<T, Never>;
@@ -44,6 +46,11 @@ template<typename T, typename R>
 concept ExpectedReturn =
     Specializes<T, std::expected> && MaybeError<typename T::error_type> &&
     std::convertible_to<T, std::expected<R, typename T::error_type>>;
+
+template<typename T, typename U>
+concept PredicateFunction = requires(T& f, const U& x) {
+    { f(x) } -> std::convertible_to<bool>;
+};
 
 /*
  * This functionality is impossible is impossible to implement without
@@ -56,12 +63,59 @@ concept ExpectedReturn =
         auto res {expr};                                                      \
         static_assert(obc::utils::Specializes<decltype(res), std::expected>); \
         if constexpr (!std::same_as<                                          \
-                          typename std::remove_cvref<decltype(res             \
+                          typename std::remove_cvref_t<decltype(res           \
                           )>::error_type,                                     \
                           obc::utils::Never>) {                               \
-            if (!res) return std::unexpected(std::move(res.error()));         \
+            if (!res) return std::unexpected {std::move(res.error())};        \
         }                                                                     \
         res.value();                                                          \
     })
+
+#define UNWRAP_TAGGED(expr, tag)                                                                                                       \
+    ({                                                                                                                                 \
+        auto res {expr};                                                                                                               \
+        static_assert(obc::utils::Specializes<decltype(res), std::expected> || obc::utils::Specializes<decltype(res), std::optional>); \
+        if constexpr (obc::utils::Specializes<decltype(res), std::optional>) {                                                         \
+            if (!res) return std::unexpected {tag};                                                                                    \
+        } else if constexpr (!std::same_as<                                                                                            \
+                                 typename std::remove_cvref_t<decltype(res                                                             \
+                                 )>::error_type,                                                                                       \
+                                 obc::utils::Never>) {                                                                                 \
+            if (!res)                                                                                                                  \
+                return std::unexpected {                                                                                               \
+                    {tag, std::move(res.error())}                                                                                      \
+                };                                                                                                                     \
+        }                                                                                                                              \
+        res.value();                                                                                                                   \
+    })
+
+#define UNWRAP_OPT(expr)                                                      \
+    ({                                                                        \
+        auto res {expr};                                                      \
+        static_assert(obc::utils::Specializes<decltype(res), std::optional>); \
+        if (!res) return std::nullopt;                                        \
+        res.value();                                                          \
+    })
+
 // NOLINTEND(cppcoreguidelines-macro-usage)
+
+template<OptionLikeAny T>
+inline auto UnwrapOrPanic(T x) -> std::remove_reference_t<decltype(*x)> {
+    if (static_cast<bool>(x)) return *x;
+    Panic();
+}
+
+template<typename T, PredicateFunction<T> C>
+inline auto CheckOrPanic(T x, C& check) -> T {
+    if (check(x)) return x;
+    Panic();
+}
+
+inline auto [[noreturn]] Panic() -> void {
+    // TODO(evan): make this do something
+}
+
+inline auto IsHalOk(const HAL_StatusTypeDef status) -> bool {
+    return status == HAL_OK;
+}
 }  // namespace obc::utils

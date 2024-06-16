@@ -90,10 +90,10 @@ class Timeout : public detail::Timeout {
      */
     template<Pollable F>
     auto Poll(F& f) -> std::optional<std::remove_reference_t<decltype(*f())>> {
-        do {
+        while (!(*this)) {
             if (auto x = f()) return *x;
             Yield();
-        } while (!(*this));
+        }
         return std::nullopt;
     }
 

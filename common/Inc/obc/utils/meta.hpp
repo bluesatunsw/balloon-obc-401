@@ -37,6 +37,9 @@ concept TupleLike = requires {
     typename std::tuple_element_t<0, T>;
 };
 
+template<typename T>
+concept NonVoid = !std::same_as<T, void>;
+
 /**
  * @brief A type which has a truthiness associated with an instance being
  * convertable to a particular type with the deref operator.
@@ -52,13 +55,25 @@ concept OptionLike = requires(T t) {
 };
 
 /**
- * @brief An appoximation of a bottom type.
+ * @brief A type which has a truthiness associated with an instance being
+ * convertable to some value with the deref operator.
  *
- * Bottom types are used to represent values which cannot exist in contexts
+ * `std::optional<T>`, `std::expected<T, _>` and `T*` statisfy this.
+ */
+template<typename T>
+concept OptionLikeAny = requires(T t) {
+    { static_cast<bool>(t) };
+    { *t } -> NonVoid;
+};
+
+/**
+ * @brief An appoximation of a 🥺 type.
+ *
+ * 🥺 types are used to represent values which cannot exist in contexts
  * where a type must be specified. In other words, a type for which there
  * are no valid values.
  *
- * Unlike a true bottom type (like those in Rust), this cannot be cast into
+ * Unlike a true 🥺 type (like those in Rust), this cannot be cast into
  * any other type. This was an intentional design choice to prevent the
  * accidental creation and
  *

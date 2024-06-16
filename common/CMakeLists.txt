@@ -12,6 +12,7 @@ set(COMMON_HEADERS
     ${PROJECT_SOURCE_DIR}/Inc/obc/utils/handle.hpp
     ${PROJECT_SOURCE_DIR}/Inc/obc/utils/meta.hpp
     ${PROJECT_SOURCE_DIR}/Inc/obc/bus.hpp
+    ${PROJECT_SOURCE_DIR}/Inc/obc/bus/can.hpp
     ${PROJECT_SOURCE_DIR}/Inc/obc/port.hpp
 )
 
