@@ -45,7 +45,8 @@ concept ExpectedReturn =
     Specializes<T, std::expected> && MaybeError<typename T::error_type> &&
     std::convertible_to<T, std::expected<R, typename T::error_type>>;
 
-/*This functionality is impossible is impossible to implement without
+/*
+ * This functionality is impossible is impossible to implement without
  * macros since unwrapping is an operation which can return from the
  * enclosing context.
  */

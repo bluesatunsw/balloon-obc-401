@@ -104,10 +104,32 @@ concept Buffer = requires(T& buf, V v, std::size_t i) {
 } && std::semiregular<V>;
 
 /**
- * @brief Convert a trivial struct into a byte buffer.
+ * @brief Convert a trivial struct into a readonly byte buffer.
  *
  * Can be used to facilitate trivial deserialization of C-style structs sent on
  * a bus.
+ * 
+ * @warning For portability, the struct should be tightly packed (containing
+ * explicit padding fields if required) with fixed sized integers.
+ *
+ * @tparam T type of the struct to translate.
+ */
+template<typename T>
+    requires std::is_trivially_copyable_v<T>
+auto StructAsBuffer(const T& s) -> std::span<const std::byte, sizeof(T)> {
+    // This function is constrained to only operate on POD structs
+    // NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
+    return {reinterpret_cast<const std::byte*>(&s), sizeof(T)};
+}
+
+/**
+ * @brief Convert a trivial struct into a read-write byte buffer.
+ *
+ * Can be used to facilitate trivial deserialization of C-style structs sent on
+ * a bus.
+ * 
+ * @warning For portability, the struct should be tightly packed (containing
+ * explicit padding fields if required) with fixed sized integers.
  *
  * @tparam T type of the struct to translate.
  */
