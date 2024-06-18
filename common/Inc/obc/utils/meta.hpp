@@ -143,6 +143,4 @@ inline constexpr bool IsSpecializationOfV = IsSpecializationOf<T, Z>::value;
 
 template<typename T, template<typename...> class Z>
 concept Specializes = IsSpecializationOfV<T, Z>;
-
-#define TEMP_NAME temp_##__COUNTER__
 }  // namespace obc::utils
